@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+._*
+
+# Local environment / secrets
+.env
+
+# Node
+node_modules/
+
+# Runtime/local data
+shackclock-settings.json

@@ -1,0 +1,80 @@
+services:
+  shackclock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: node-red-shackclock:1.0.0
+    container_name: shackclock
+    restart: unless-stopped
+
+    ports:
+      - "${SHACKCLOCK_PORT:-4040}:4040"
+
+    environment:
+      PORT: "4040"
+      SHACKCLOCK_PUBLIC_PORT: ${SHACKCLOCK_PORT:-4040}
+      TZ: ${TZ:-America/Los_Angeles}
+      STATION_CALL: ${STATION_CALL:-N0CALL}
+      STATION_NAME: ${STATION_NAME:-ShackClock}
+      STATION_LAT: ${STATION_LAT:-0}
+      STATION_LON: ${STATION_LON:-0}
+      STATION_ELEV_M: ${STATION_ELEV_M:-180}
+      WEEWX_JSON_URL: ${WEEWX_JSON_URL:-}
+      LIGHTNING_GEOJSON_URL: ${LIGHTNING_GEOJSON_URL:-}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      EARTHQUAKE_MIN_MAG: ${EARTHQUAKE_MIN_MAG:-2.5}
+      EARTHQUAKE_MAX_AGE_HOURS: ${EARTHQUAKE_MAX_AGE_HOURS:-24}
+      AIR_TRAFFIC_ENABLED: ${AIR_TRAFFIC_ENABLED:-true}
+      AIR_TRAFFIC_MODE: ${AIR_TRAFFIC_MODE:-worldwide}
+      AIR_TRAFFIC_JSON_URL: ${AIR_TRAFFIC_JSON_URL:-}
+      AIR_TRAFFIC_RADIUS_NM: ${AIR_TRAFFIC_RADIUS_NM:-150}
+      AIR_TRAFFIC_REFRESH_SEC: ${AIR_TRAFFIC_REFRESH_SEC:-900}
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+      CARRIER_ENABLED: ${CARRIER_ENABLED:-true}
+      CARRIER_GEOJSON_URL: ${CARRIER_GEOJSON_URL:-}
+      CARRIER_REFRESH_HOURS: ${CARRIER_REFRESH_HOURS:-6}
+      CARRIER_MAX_AGE_HOURS: ${CARRIER_MAX_AGE_HOURS:-336}
+      DX_CLUSTER_ENABLED: ${DX_CLUSTER_ENABLED:-true}
+      DX_CLUSTER_HOST: ${DX_CLUSTER_HOST:-w3lpl.net}
+      DX_CLUSTER_PORT: ${DX_CLUSTER_PORT:-7373}
+      DX_CLUSTER_CALL: ${DX_CLUSTER_CALL:-${STATION_CALL:-N0CALL}}
+      DX_CLUSTER_MAX_AGE_MIN: ${DX_CLUSTER_MAX_AGE_MIN:-20}
+      POTA_SPOTS_URL: ${POTA_SPOTS_URL:-https://api.pota.app/spot/activator}
+      PSKREPORTER_SECONDS: ${PSKREPORTER_SECONDS:--3600}
+      PSKREPORTER_LIMIT: ${PSKREPORTER_LIMIT:-100}
+      ISS_TLE_URL: ${ISS_TLE_URL:-https://api.wheretheiss.at/v1/satellites/25544/tles?format=text}
+      CITY1_LABEL: ${CITY1_LABEL:-Tokyo}
+      CITY1_TZ: ${CITY1_TZ:-Asia/Tokyo}
+      CITY2_LABEL: ${CITY2_LABEL:-Sydney}
+      CITY2_TZ: ${CITY2_TZ:-Australia/Sydney}
+      CITY3_LABEL: ${CITY3_LABEL:-London}
+      CITY3_TZ: ${CITY3_TZ:-Europe/London}
+      CITY4_LABEL: ${CITY4_LABEL:-New York}
+      CITY4_TZ: ${CITY4_TZ:-America/New_York}
+      CITY5_LABEL: ${CITY5_LABEL:-Denver}
+      CITY5_TZ: ${CITY5_TZ:-America/Denver}
+      CITY6_LABEL: ${CITY6_LABEL:-Chicago}
+      CITY6_TZ: ${CITY6_TZ:-America/Chicago}
+      CITY7_LABEL: ${CITY7_LABEL:-}
+      CITY7_TZ: ${CITY7_TZ:-}
+      CITY8_LABEL: ${CITY8_LABEL:-}
+      CITY8_TZ: ${CITY8_TZ:-}
+
+    volumes:
+      - shackclock-data:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4040/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  shackclock-data:
+    name: ${SHACKCLOCK_DATA_VOLUME:-shackclock-data}

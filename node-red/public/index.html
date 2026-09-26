@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <title>ShackClock v1.0.0</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/style.css?v=1.0.0" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel-stack left-stack">
+    <section class="glass weather-panel">
+      <div class="eyebrow"><span id="station-call">HAM WEATHER</span> <span class="muted" id="station-source"></span> <span class="muted" id="station-age">weather</span></div>
+      <div class="weather-grid">
+        <div class="weather-main"><span id="temp">--</span><span class="degree">°</span></div>
+        <div class="weather-details">
+          <div>Feels <b id="feels">--°</b> · RH <b id="rh">--%</b></div>
+          <div>Dew <b id="dew">--°</b> · Wind <b id="wind">--</b></div>
+          <div><span id="rain-label">Rain</span> <b id="rain">--</b></div>
+        </div>
+      </div>
+      <div class="weather-condition" id="weather-condition"></div>
+    </section>
+
+    <section class="glass space-panel">
+      <div class="eyebrow">SPACE WEATHER · NOAA SWPC <span class="muted" id="space-age"></span></div>
+      <div class="metrics">
+        <div><span>Solar Flux</span><b id="sfi">--</b></div>
+        <div><span>Kp</span><b id="kp">--</b></div>
+        <div><span>Radio</span><b id="r-scale">R-</b></div>
+        <div><span>Radiation</span><b id="s-scale">S-</b></div>
+        <div><span>Geomagnetic</span><b id="g-scale">G-</b></div>
+        <div><span>HF</span><b id="hf-condition">--</b></div>
+      </div>
+    </section>
+
+    <section class="glass ham-panel">
+      <div class="eyebrow">HAM ACTIVITY</div>
+      <div class="ham-stats">
+        <div><b id="dx-count">--</b><span>DX spots</span></div>
+        <div><b id="pota-count">--</b><span>POTA</span></div>
+        <div><b id="psk-count">--</b><span>PSK paths</span></div>
+        <div><b id="sat-count">--</b><span>Active sats</span></div>
+      </div>
+      <div id="spot-ticker" class="spot-ticker">Waiting for amateur-radio feeds…</div>
+      <div class="recent-spots-grid">
+        <div class="recent-spots-block">
+          <div class="recent-spots-title">LATEST DX</div>
+          <div id="dx-recent" class="recent-spots"><div class="spot-empty">Waiting for DX spots…</div></div>
+        </div>
+        <div class="recent-spots-block">
+          <div class="recent-spots-title">LATEST POTA</div>
+          <div id="pota-recent" class="recent-spots"><div class="spot-empty">Waiting for POTA spots…</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="glass panel iss-panel">
+    <div class="eyebrow">ISS</div>
+    <div class="iss-row"><b id="iss-distance">--</b><span>km from QTH</span></div>
+    <div class="tiny">Alt <span id="iss-alt">--</span> km · <span id="iss-latlon">--</span></div>
+    <div class="iss-status" id="iss-status">Loading orbital data…</div>
+  </section>
+
+  <div class="panel-stack right-stack">
+    <section class="glass forecast-panel">
+      <div class="eyebrow">FORECAST · NWS</div>
+      <div id="forecast" class="forecast-grid"><div class="muted">Loading…</div></div>
+    </section>
+
+    <section class="glass layer-panel">
+      <div class="eyebrow layer-title-row"><span>LAYERS</span><button class="settings-link" id="open-settings" type="button">SETTINGS</button></div>
+      <div class="layer-grid">
+        <label><input type="checkbox" data-layer="radar" checked> RADAR</label>
+        <label><input type="checkbox" data-layer="clouds" checked> CLOUDS</label>
+        <label><input type="checkbox" data-layer="lightning" checked> LIGHTNING</label>
+        <label><input type="checkbox" data-layer="earthquakes"> EARTHQUAKES</label>
+        <label><input type="checkbox" data-layer="airTraffic"> AIR TRAFFIC</label>
+        <label><input type="checkbox" data-layer="carriers"> CARRIERS</label>
+        <label><input type="checkbox" data-layer="greyline" checked> GREYLINE</label>
+        <label><input type="checkbox" data-layer="aurora"> AURORA</label>
+        <label><input type="checkbox" data-layer="dxSpots"> DX SPOTS</label>
+        <label><input type="checkbox" data-layer="pota"> POTA</label>
+        <label><input type="checkbox" data-layer="pskPaths"> PSK PATHS</label>
+        <label><input type="checkbox" data-layer="amateurSat"> ACTIVE HAM SATS</label>
+        <label><input type="checkbox" data-layer="iss" checked> ISS</label>
+        <label><input type="checkbox" data-layer="issTrack" checked> ISS TRACK</label>
+        <label><input type="checkbox" data-layer="footprint" checked> ISS FOOTPRINT</label>
+        <label><input type="checkbox" data-layer="station" checked> QTH</label>
+        <label><input type="checkbox" data-layer="borders" checked> LABELS</label>
+      </div>
+      <div class="opacity-control">
+        <div><span>CLOUD OPACITY</span><b id="cloud-opacity-value">48%</b></div>
+        <input id="cloud-opacity" type="range" min="0" max="100" step="5" value="48" aria-label="Cloud opacity">
+      </div>
+      <div class="layer-source-status"><span id="air-source-status">AIR · --</span><span id="carrier-source-status">CARRIERS · --</span></div>
+      <div class="base-map-note">BASE MAP · ESRI WORLD IMAGERY · ALWAYS ON</div>
+      <div class="layer-actions">
+        <button id="view-local">LOCAL</button><button id="view-usa">USA</button><button id="view-world">WORLD</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="glass panel clock-panel">
+    <div class="clock-block"><span class="eyebrow">LOCAL</span><b id="local-clock">--:--:--</b></div>
+    <div class="clock-block utc"><span class="eyebrow">UTC</span><b id="utc-clock">--:--:--</b></div>
+  </section>
+
+  <section class="glass panel city-times-panel" id="city-times-panel" hidden>
+    <div id="city-times" class="city-times-grid"></div>
+  </section>
+
+  <section class="glass panel status-panel">
+    <div id="date-local">--</div><div class="muted" id="date-utc">-- UTC</div>
+    <div class="health"><span id="health-dot" class="dot"></span><span id="health-text">NODE-RED</span></div>
+    <div class="attribution">Esri · RainViewer · OpenWeather · NOAA SWPC/OVATION · USGS · OpenSky/ADSB.lol · USNI · AMSAT · POTA · PSKReporter</div>
+  </section>
+
+  <dialog id="settings-dialog" class="settings-dialog">
+    <form id="ui-settings-form" class="ui-settings-form" method="dialog">
+      <div class="settings-dialog-header">
+        <div>
+          <div class="eyebrow">SHACKCLOCK SETTINGS</div>
+          <div class="settings-subtitle">Application settings are saved in Docker's persistent volume. Deployment settings such as <code>SHACKCLOCK_PORT</code> are set in the project <code>.env</code> file.</div>
+        </div>
+        <button id="close-settings" class="settings-close" type="button" aria-label="Close settings">×</button>
+      </div>
+
+      <div class="settings-scroll">
+        <fieldset>
+          <legend>Station</legend>
+          <div class="settings-grid">
+            <label>Timezone
+              <input name="TZ" list="timezone-options" placeholder="America/Los_Angeles">
+              <datalist id="timezone-options">
+                <option value="America/Los_Angeles"></option><option value="America/Denver"></option>
+                <option value="America/Chicago"></option><option value="America/New_York"></option>
+                <option value="UTC"></option>
+              </datalist>
+            </label>
+            <label>Station callsign<input name="STATION_CALL" autocomplete="off"></label>
+            <label class="settings-wide">Display name<input name="STATION_NAME" autocomplete="off"></label>
+            <label>Latitude<input name="STATION_LAT" type="number" step="any"></label>
+            <label>Longitude<input name="STATION_LON" type="number" step="any"></label>
+            <label>Elevation (meters)<input name="STATION_ELEV_M" type="number" step="1"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>City clocks</legend>
+          <small>Configure up to eight clocks. Use an IANA timezone such as <code>Europe/London</code>, <code>Asia/Tokyo</code>, or <code>Australia/Sydney</code>. Leave both fields blank to hide a slot.</small>
+          <div class="city-settings-grid">
+            <div class="city-setting-row"><span>1</span><label>Label<input name="CITY1_LABEL" placeholder="City"></label><label>Timezone<input name="CITY1_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>2</span><label>Label<input name="CITY2_LABEL" placeholder="City"></label><label>Timezone<input name="CITY2_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>3</span><label>Label<input name="CITY3_LABEL" placeholder="City"></label><label>Timezone<input name="CITY3_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>4</span><label>Label<input name="CITY4_LABEL" placeholder="City"></label><label>Timezone<input name="CITY4_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>5</span><label>Label<input name="CITY5_LABEL" placeholder="City"></label><label>Timezone<input name="CITY5_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>6</span><label>Label<input name="CITY6_LABEL" placeholder="City"></label><label>Timezone<input name="CITY6_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>7</span><label>Label<input name="CITY7_LABEL" placeholder="City"></label><label>Timezone<input name="CITY7_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+            <div class="city-setting-row"><span>8</span><label>Label<input name="CITY8_LABEL" placeholder="City"></label><label>Timezone<input name="CITY8_TZ" list="city-timezone-options" placeholder="Europe/London"></label></div>
+          </div>
+          <datalist id="city-timezone-options">
+            <option value="America/Los_Angeles"></option><option value="America/Denver"></option><option value="America/Chicago"></option><option value="America/New_York"></option>
+            <option value="Europe/London"></option><option value="Europe/Paris"></option><option value="Asia/Jerusalem"></option><option value="Asia/Dubai"></option>
+            <option value="Asia/Tokyo"></option><option value="Asia/Singapore"></option><option value="Australia/Sydney"></option><option value="Pacific/Auckland"></option>
+            <option value="UTC"></option>
+          </datalist>
+        </fieldset>
+
+        <fieldset>
+          <legend>Weather</legend>
+          <div class="settings-grid">
+            <label class="settings-wide">OpenWeather API key
+              <div class="secret-row"><input name="OPENWEATHER_API_KEY" id="owm-key" type="password" autocomplete="off"><button id="toggle-key" type="button">SHOW</button></div>
+              <small>Used for current conditions and cloud tiles when WeeWX is not configured.</small>
+            </label>
+            <label class="settings-wide">WeeWX JSON URL<input name="WEEWX_JSON_URL" type="url" placeholder="Optional local weather-station endpoint"></label>
+            <label class="settings-wide">Lightning GeoJSON URL<input name="LIGHTNING_GEOJSON_URL" type="url" placeholder="Optional GeoJSON lightning feed"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Map data</legend>
+          <div class="settings-grid">
+            <label>Earthquake minimum magnitude<input name="EARTHQUAKE_MIN_MAG" type="number" min="0" max="10" step="0.1"></label>
+            <label>Earthquake age (hours)<input name="EARTHQUAKE_MAX_AGE_HOURS" type="number" min="1" max="720" step="1"></label>
+            <label>Air traffic enabled<select name="AIR_TRAFFIC_ENABLED"><option value="true">Yes</option><option value="false">No</option></select></label>
+            <label>Air traffic mode<select name="AIR_TRAFFIC_MODE"><option value="worldwide">Worldwide · OpenSky</option><option value="nearby">Nearby · ADSB.lol/ADSB.fi</option><option value="local">Local receiver</option></select></label>
+            <label>Air traffic radius (NM)<input name="AIR_TRAFFIC_RADIUS_NM" type="number" min="10" max="250" step="5"><small>Used only in Nearby mode.</small></label>
+            <label>Air traffic refresh (seconds)<input name="AIR_TRAFFIC_REFRESH_SEC" type="number" min="15" max="86400" step="15"><small>Use 900 or longer for anonymous worldwide OpenSky.</small></label>
+            <label class="settings-wide">Local dump1090/readsb aircraft.json URL<input name="AIR_TRAFFIC_JSON_URL" type="url" placeholder="http://receiver:8080/data/aircraft.json"><small>Used only in Local receiver mode.</small></label>
+            <label class="settings-wide">OpenSky client ID<input name="OPENSKY_CLIENT_ID" autocomplete="off" placeholder="Optional"><small>Worldwide mode works anonymously every 15 minutes. Add OAuth credentials for a larger quota.</small></label>
+            <label class="settings-wide">OpenSky client secret<input name="OPENSKY_CLIENT_SECRET" type="password" autocomplete="off" placeholder="Optional"></label>
+            <label>Carrier activity enabled<select name="CARRIER_ENABLED"><option value="true">Yes</option><option value="false">No</option></select></label>
+            <label>Carrier refresh (hours)<input name="CARRIER_REFRESH_HOURS" type="number" min="1" max="168" step="1"></label>
+            <label>Carrier max age (hours)<input name="CARRIER_MAX_AGE_HOURS" type="number" min="1" max="2160" step="1"></label>
+            <label class="settings-wide">Custom carrier GeoJSON URL<input name="CARRIER_GEOJSON_URL" type="url" placeholder="Optional override"><small>Leave blank to use the latest public USNI Fleet Tracker. The built-in source is intentionally coarse: it plots only the publicly reported region, not a precise live military position.</small></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>DX Cluster</legend>
+          <div class="settings-grid">
+            <label>Enabled<select name="DX_CLUSTER_ENABLED"><option value="true">Yes</option><option value="false">No</option></select></label>
+            <label>Host<input name="DX_CLUSTER_HOST" placeholder="w3lpl.net"></label>
+            <label>Port<input name="DX_CLUSTER_PORT" type="number" min="1" max="65535"></label>
+            <label>Login callsign<input name="DX_CLUSTER_CALL" autocomplete="off"></label>
+            <label>Spot age (minutes)<input name="DX_CLUSTER_MAX_AGE_MIN" type="number" min="1" max="1440"></label>
+          </div>
+          <small>Default: W3LPL AR-Cluster at w3lpl.net:7373. The cluster helper reconnects automatically.</small>
+        </fieldset>
+
+        <fieldset>
+          <legend>Ham-radio feeds</legend>
+          <div class="settings-grid">
+            <label class="settings-wide">ISS orbit data URL<input name="ISS_TLE_URL" type="url"></label>
+            <label class="settings-wide">POTA spots URL<input name="POTA_SPOTS_URL" type="url"></label>
+            <label>PSKReporter lookback seconds<input name="PSKREPORTER_SECONDS" type="number" step="1"></label>
+            <label>PSKReporter report limit<input name="PSKREPORTER_LIMIT" type="number" min="1" max="5000"></label>
+            <label>AMSAT active window (hours)<input name="AMSAT_ACTIVE_HOURS" type="number" min="1" max="720"></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="settings-dialog-actions">
+        <span id="ui-settings-status" role="status"></span>
+        <div>
+          <button id="reset-ui-settings" class="settings-secondary" type="button">RESET TO .ENV / DEFAULTS</button>
+          <button id="reload-ui-settings" class="settings-secondary" type="button">RELOAD</button>
+          <button class="settings-primary" type="submit">SAVE & APPLY</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/@joergdietrich/leaflet.terminator@1.3.0/L.Terminator.js"></script>
+  <script src="/vendor/satellite.min.js?v=6.0.2"></script>
+  <script src="/app.js?v=1.0.0"></script>
+</body>
+</html>

@@ -1,0 +1,1617 @@
+[
+  {
+    "id": "tab_shackclock",
+    "type": "tab",
+    "label": "ShackClock APIs",
+    "disabled": false,
+    "info": "HTTP API layer for the full-screen Leaflet ShackClock display."
+  },
+  {
+    "id": "config_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /config",
+    "url": "/config",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 80,
+    "wires": [
+      [
+        "config_fn"
+      ]
+    ]
+  },
+  {
+    "id": "config_fn",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Build config",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst n=(v,d)=>{const x=Number(v);return Number.isFinite(x)?x:d;};\nconst weewx=!!V('WEEWX_JSON_URL',''); const owm=!!V('OPENWEATHER_API_KEY','');\nconst cityDefs={1:['Tokyo','Asia/Tokyo'],2:['Sydney','Australia/Sydney'],3:['London','Europe/London'],4:['New York','America/New_York'],5:['Denver','America/Denver'],6:['Chicago','America/Chicago'],7:['',''],8:['','']};const cityTimes=[];for(let i=1;i<=8;i++){const def=cityDefs[i]||['',''];const label=String(V(`CITY${i}_LABEL`,def[0])).trim(),timezone=String(V(`CITY${i}_TZ`,def[1])).trim();if(label&&timezone)cityTimes.push({label,timezone});}\nmsg.headers={'content-type':'application/json','cache-control':'no-store'};\nmsg.payload={timezone:V('TZ','America/Los_Angeles'),call:V('STATION_CALL','N0CALL'),name:V('STATION_NAME','ShackClock'),lat:n(V('STATION_LAT',0),0),lon:n(V('STATION_LON',0),0),elevM:n(V('STATION_ELEV_M',180),180),cityTimes,weatherSource:weewx?'WeeWX':(owm?'OpenWeather':'none'),weewxConfigured:weewx,lightningConfigured:!!V('LIGHTNING_GEOJSON_URL',''),openWeatherConfigured:owm,earthquakes:{minMag:n(V('EARTHQUAKE_MIN_MAG',2.5),2.5),maxAgeHours:n(V('EARTHQUAKE_MAX_AGE_HOURS',24),24)},airTraffic:{enabled:String(V('AIR_TRAFFIC_ENABLED','true'))!=='false',mode:V('AIR_TRAFFIC_MODE','worldwide'),localConfigured:!!V('AIR_TRAFFIC_JSON_URL',''),radiusNm:n(V('AIR_TRAFFIC_RADIUS_NM',150),150),refreshSec:n(V('AIR_TRAFFIC_REFRESH_SEC',900),900),openSkyAuthenticated:!!(V('OPENSKY_CLIENT_ID','')&&V('OPENSKY_CLIENT_SECRET',''))},carriers:{enabled:String(V('CARRIER_ENABLED','true'))!=='false',configured:String(V('CARRIER_ENABLED','true'))!=='false',customConfigured:!!V('CARRIER_GEOJSON_URL',''),refreshHours:n(V('CARRIER_REFRESH_HOURS',6),6),maxAgeHours:n(V('CARRIER_MAX_AGE_HOURS',336),336)},dxCluster:{enabled:String(V('DX_CLUSTER_ENABLED','true'))!=='false',host:V('DX_CLUSTER_HOST','w3lpl.net'),port:Number(V('DX_CLUSTER_PORT',7373)),call:V('DX_CLUSTER_CALL',V('STATION_CALL','N0CALL'))},hamFeeds:{dx:true,pota:true,psk:true,amateurSat:true,aurora:true,earthquakes:true,airTraffic:true,carriers:String(V('CARRIER_ENABLED','true'))!=='false'}}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 80,
+    "wires": [
+      [
+        "config_out"
+      ]
+    ]
+  },
+  {
+    "id": "config_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "config response",
+    "statusCode": "",
+    "headers": {},
+    "x": 590,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "radar_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /radar",
+    "url": "/radar",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 140,
+    "wires": [
+      [
+        "radar_url"
+      ]
+    ]
+  },
+  {
+    "id": "radar_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "RainViewer metadata URL",
+    "func": "msg.url = 'https://api.rainviewer.com/public/weather-maps.json';\nmsg.headers = {'User-Agent':'ShackClock/1.0.0'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 140,
+    "wires": [
+      [
+        "radar_http"
+      ]
+    ]
+  },
+  {
+    "id": "radar_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "RainViewer metadata",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 140,
+    "wires": [
+      [
+        "radar_out"
+      ]
+    ]
+  },
+  {
+    "id": "radar_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "RainViewer metadata response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "space_kp_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/kp",
+    "url": "/space/kp",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 200,
+    "wires": [
+      [
+        "space_kp_url"
+      ]
+    ]
+  },
+  {
+    "id": "space_kp_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "NOAA Kp URL",
+    "func": "msg.url = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json';\nmsg.headers = {'User-Agent':'ShackClock/1.0.0'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 200,
+    "wires": [
+      [
+        "space_kp_http"
+      ]
+    ]
+  },
+  {
+    "id": "space_kp_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NOAA Kp",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 200,
+    "wires": [
+      [
+        "space_kp_out"
+      ]
+    ]
+  },
+  {
+    "id": "space_kp_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "NOAA Kp response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "space_flux_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/flux",
+    "url": "/space/flux",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 260,
+    "wires": [
+      [
+        "space_flux_url"
+      ]
+    ]
+  },
+  {
+    "id": "space_flux_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "NOAA F10.7 URL",
+    "func": "msg.url = 'https://services.swpc.noaa.gov/products/summary/10cm-flux.json';\nmsg.headers = {'User-Agent':'ShackClock/1.0.0'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 260,
+    "wires": [
+      [
+        "space_flux_http"
+      ]
+    ]
+  },
+  {
+    "id": "space_flux_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NOAA F10.7",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 260,
+    "wires": [
+      [
+        "space_flux_out"
+      ]
+    ]
+  },
+  {
+    "id": "space_flux_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "NOAA F10.7 response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "space_scales_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/scales",
+    "url": "/space/scales",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 320,
+    "wires": [
+      [
+        "space_scales_url"
+      ]
+    ]
+  },
+  {
+    "id": "space_scales_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "NOAA scales URL",
+    "func": "msg.url = 'https://services.swpc.noaa.gov/products/noaa-scales.json';\nmsg.headers = {'User-Agent':'ShackClock/1.0.0'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 320,
+    "wires": [
+      [
+        "space_scales_http"
+      ]
+    ]
+  },
+  {
+    "id": "space_scales_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NOAA scales",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 320,
+    "wires": [
+      [
+        "space_scales_out"
+      ]
+    ]
+  },
+  {
+    "id": "space_scales_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "NOAA scales response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "iss_tle_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET cached /iss/tle",
+    "url": "/iss/tle",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 380,
+    "wires": [
+      [
+        "iss_tle_url"
+      ]
+    ]
+  },
+  {
+    "id": "iss_tle_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Read cached ISS orbit data",
+    "func": "const fs=global.get('fs');\nmsg.headers={'content-type':'text/plain; charset=utf-8','cache-control':'no-store'};\ntry{msg.payload=fs.readFileSync('/data/iss-orbit-cache.txt','utf8');msg.statusCode=200;}catch(e){msg.statusCode=503;msg.payload='ISS orbit cache unavailable: '+e.message;}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 380,
+    "wires": [
+      [
+        "iss_tle_out"
+      ]
+    ]
+  },
+  {
+    "id": "iss_tle_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "Cached ISS orbit response",
+    "statusCode": "",
+    "headers": {
+      "content-type": "text/plain",
+      "cache-control": "no-store"
+    },
+    "x": 820,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "forecast_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /forecast",
+    "url": "/forecast",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 140,
+    "y": 460,
+    "wires": [
+      [
+        "forecast_points_url"
+      ]
+    ]
+  },
+  {
+    "id": "forecast_points_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "NWS points URL",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst lat=Number(V('STATION_LAT',0)), lon=Number(V('STATION_LON',0)); msg.url=`https://api.weather.gov/points/${lat},${lon}`; msg.headers={'User-Agent':'ShackClock/1.0.0','Accept':'application/geo+json'}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 460,
+    "wires": [
+      [
+        "forecast_points_http"
+      ]
+    ]
+  },
+  {
+    "id": "forecast_points_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NWS points",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 590,
+    "y": 460,
+    "wires": [
+      [
+        "forecast_extract"
+      ]
+    ]
+  },
+  {
+    "id": "forecast_extract",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Extract forecast URL",
+    "func": "const u = msg.payload?.properties?.forecast;\nif (!u) { msg.statusCode = 502; msg.payload = {error:'NWS points response did not include a forecast URL'}; return [null,msg]; }\nmsg.url = u;\nmsg.headers = {'User-Agent':'ShackClock/1.0.0 (personal ham radio display)','Accept':'application/geo+json'};\nreturn [msg,null];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 830,
+    "y": 460,
+    "wires": [
+      [
+        "forecast_http"
+      ],
+      [
+        "forecast_out"
+      ]
+    ]
+  },
+  {
+    "id": "forecast_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NWS forecast",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1070,
+    "y": 440,
+    "wires": [
+      [
+        "forecast_out"
+      ]
+    ]
+  },
+  {
+    "id": "forecast_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "forecast response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1290,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "station_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /station",
+    "url": "/station",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 540,
+    "wires": [
+      [
+        "station_choose"
+      ]
+    ]
+  },
+  {
+    "id": "station_choose",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Station source",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst cachedLocal=global.get('stationWeather'); if(cachedLocal&&typeof cachedLocal==='object'){msg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload={...cachedLocal,source:cachedLocal.source||'Local/MQTT'};return [null,null,msg];}\nconst weewx=V('WEEWX_JSON_URL',''); if(weewx){msg.url=weewx;msg.headers={'User-Agent':'ShackClock/1.0.0'};return [msg,null,null];}\nconst key=V('OPENWEATHER_API_KEY',''); if(key){const cache=global.get('openWeatherCurrentCache');if(cache&&cache.payload&&(Date.now()-cache.savedAt)<10*60*1000){msg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload=cache.payload;return [null,null,msg];}const lat=Number(V('STATION_LAT',0)),lon=Number(V('STATION_LON',0));msg.url=`https://api.openweathermap.org/data/2.5/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&units=imperial&appid=${encodeURIComponent(key)}`;msg.headers={'User-Agent':'ShackClock/1.0.0'};return [null,msg,null];}\nmsg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload={configured:false,note:'Configure OpenWeather or WeeWX from Settings'};return [null,null,msg];",
+    "outputs": 3,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 540,
+    "wires": [
+      [
+        "station_http"
+      ],
+      [
+        "station_owm_http"
+      ],
+      [
+        "station_out"
+      ]
+    ]
+  },
+  {
+    "id": "station_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "WeeWX JSON (optional)",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 580,
+    "y": 520,
+    "wires": [
+      [
+        "station_out"
+      ]
+    ]
+  },
+  {
+    "id": "station_owm_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "OpenWeather current",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 590,
+    "y": 560,
+    "wires": [
+      [
+        "station_owm_norm"
+      ]
+    ]
+  },
+  {
+    "id": "station_owm_norm",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Normalize OpenWeather",
+    "func": "const d = msg.payload || {};\nconst temp = Number(d.main?.temp);\nconst rh = Number(d.main?.humidity);\nlet dew;\nif (Number.isFinite(temp) && Number.isFinite(rh) && rh > 0) {\n  const c = (temp - 32) * 5/9;\n  const a = 17.625, b = 243.04;\n  const gamma = Math.log(rh/100) + (a*c)/(b+c);\n  dew = ((b*gamma)/(a-gamma)) * 9/5 + 32;\n}\nconst rainMm = Number(d.rain?.['1h'] || 0);\nconst payload = {\n  configured: true,\n  source: 'OpenWeather',\n  location: d.name || '',\n  description: d.weather?.[0]?.description || '',\n  outTemp: Number.isFinite(temp) ? temp : null,\n  heatindex: Number(d.main?.feels_like),\n  outHumidity: Number.isFinite(rh) ? rh : null,\n  dewpoint: Number.isFinite(dew) ? dew : null,\n  windSpeed: Number(d.wind?.speed),\n  windDir: Number(d.wind?.deg),\n  windGust: Number(d.wind?.gust),\n  pressure: Number(d.main?.pressure),\n  clouds: Number(d.clouds?.all),\n  rain1hIn: Number.isFinite(rainMm) ? rainMm / 25.4 : 0,\n  observedAt: Number(d.dt) ? Number(d.dt)*1000 : Date.now()\n};\nglobal.set('openWeatherCurrentCache',{savedAt:Date.now(),payload});\nmsg.headers = {'content-type':'application/json','cache-control':'no-store'};\nmsg.payload = payload;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 820,
+    "y": 560,
+    "wires": [
+      [
+        "station_out"
+      ]
+    ]
+  },
+  {
+    "id": "station_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "station response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "lightning_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /lightning",
+    "url": "/lightning",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 140,
+    "y": 620,
+    "wires": [
+      [
+        "lightning_choose"
+      ]
+    ]
+  },
+  {
+    "id": "lightning_choose",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Lightning source",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst u=V('LIGHTNING_GEOJSON_URL',''); if(!u){msg.headers={'content-type':'application/geo+json','cache-control':'no-store'};msg.payload={type:'FeatureCollection',features:[],configured:false};return [null,msg];}msg.url=u;msg.headers={'User-Agent':'ShackClock/1.0.0'};return [msg,null];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 620,
+    "wires": [
+      [
+        "lightning_http"
+      ],
+      [
+        "lightning_out"
+      ]
+    ]
+  },
+  {
+    "id": "lightning_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "Lightning GeoJSON",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 600,
+    "y": 600,
+    "wires": [
+      [
+        "lightning_out"
+      ]
+    ]
+  },
+  {
+    "id": "lightning_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "lightning response",
+    "statusCode": "",
+    "headers": {},
+    "x": 840,
+    "y": 620,
+    "wires": []
+  },
+  {
+    "id": "health_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /health",
+    "url": "/health",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 700,
+    "wires": [
+      [
+        "health_fn"
+      ]
+    ]
+  },
+  {
+    "id": "health_fn",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Health payload",
+    "func": "msg.headers = {'content-type':'application/json','cache-control':'no-store'};\nconst version = env.get('SHACKCLOCK_VERSION') || '1.0.0';\nconst publicPort = Number(env.get('SHACKCLOCK_PUBLIC_PORT') || 4040);\nmsg.payload = {ok:true,service:'node-red-shackclock',version,publicPort,time:new Date().toISOString()};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 700,
+    "wires": [
+      [
+        "health_out"
+      ]
+    ]
+  },
+  {
+    "id": "health_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "health response",
+    "statusCode": "",
+    "headers": {},
+    "x": 590,
+    "y": 700,
+    "wires": []
+  },
+  {
+    "id": "cloud_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /clouds/:z/:x/:y",
+    "url": "/clouds/:z/:x/:y",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 740,
+    "wires": [
+      [
+        "cloud_url"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "OpenWeather cloud tile URL",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst key=V('OPENWEATHER_API_KEY',''); if(!key){msg.statusCode=503;msg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload={error:'OpenWeather API key is not configured'};return [null,msg];} const z=String(msg.req.params.z||'').replace(/[^0-9]/g,''),x=String(msg.req.params.x||'').replace(/[^0-9]/g,''),y=String(msg.req.params.y||'').replace(/[^0-9]/g,'');if(!z||!x||!y){msg.statusCode=400;msg.payload={error:'invalid tile coordinates'};return [null,msg];}msg.url=`https://tile.openweathermap.org/map/clouds_new/${z}/${x}/${y}.png?appid=${encodeURIComponent(key)}`;msg.headers={'User-Agent':'ShackClock/1.0.0'};return [msg,null];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 740,
+    "wires": [
+      [
+        "cloud_http"
+      ],
+      [
+        "cloud_out"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "OpenWeather cloud tile",
+    "method": "GET",
+    "ret": "bin",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 660,
+    "y": 720,
+    "wires": [
+      [
+        "cloud_headers"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_headers",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Cloud tile headers",
+    "func": "msg.headers = {'content-type':'image/png','cache-control':'public, max-age=900'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 890,
+    "y": 720,
+    "wires": [
+      [
+        "cloud_out"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "cloud tile response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1110,
+    "y": 740,
+    "wires": []
+  },
+  {
+    "id": "dx_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /dx",
+    "url": "/dx",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 740,
+    "wires": [
+      [
+        "dx_url"
+      ]
+    ]
+  },
+  {
+    "id": "dx_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Read W3LPL spot cache",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nlet d={connected:false,spots:[]};try{d=JSON.parse(fs.readFileSync('/data/dx-spots.json','utf8'));}catch(e){d.error='DX cluster cache not ready';}msg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload=d;return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 740,
+    "wires": [
+      [
+        "dx_out"
+      ]
+    ]
+  },
+  {
+    "id": "dx_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "DX spots response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 740,
+    "wires": []
+  },
+  {
+    "id": "pota_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /pota",
+    "url": "/pota",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 800,
+    "wires": [
+      [
+        "pota_url"
+      ]
+    ]
+  },
+  {
+    "id": "pota_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "POTA spots URL",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nmsg.url=V('POTA_SPOTS_URL','https://api.pota.app/spot/activator');msg.headers={'User-Agent':'ShackClock/1.0.0','Accept':'application/json'};return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 800,
+    "wires": [
+      [
+        "pota_http"
+      ]
+    ]
+  },
+  {
+    "id": "pota_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "POTA spots",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 580,
+    "y": 800,
+    "wires": [
+      [
+        "pota_out"
+      ]
+    ]
+  },
+  {
+    "id": "pota_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "POTA spots response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 800,
+    "wires": []
+  },
+  {
+    "id": "psk_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /psk",
+    "url": "/psk",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 860,
+    "wires": [
+      [
+        "psk_url"
+      ]
+    ]
+  },
+  {
+    "id": "psk_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "PSKReporter URL",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst call=encodeURIComponent(V('STATION_CALL','N0CALL'));const secs=encodeURIComponent(V('PSKREPORTER_SECONDS','-3600'));const lim=encodeURIComponent(V('PSKREPORTER_LIMIT','100'));msg.url=`https://retrieve.pskreporter.info/query?callsign=${call}&flowStartSeconds=${secs}&rptlimit=${lim}&rronly=1&noactive=1`;msg.headers={'User-Agent':'ShackClock/1.0.0','Accept':'application/xml,text/xml'};return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 860,
+    "wires": [
+      [
+        "psk_http"
+      ]
+    ]
+  },
+  {
+    "id": "psk_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "PSKReporter",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 580,
+    "y": 860,
+    "wires": [
+      [
+        "psk_out"
+      ]
+    ]
+  },
+  {
+    "id": "psk_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "PSKReporter response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 860,
+    "wires": []
+  },
+  {
+    "id": "amsat_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /amateur/tle",
+    "url": "/amateur/tle",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 920,
+    "wires": [
+      [
+        "amsat_url"
+      ]
+    ]
+  },
+  {
+    "id": "amsat_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "AMSAT-active amateur TLE cache",
+    "func": "const fs=global.get('fs');\ntry{msg.payload=fs.readFileSync('/data/amateur-active-tle.txt','utf8');msg.statusCode=200;}catch(e){msg.payload='';msg.statusCode=503;}\nmsg.headers={'content-type':'text/plain; charset=utf-8','cache-control':'no-store'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 920,
+    "wires": [
+      [
+        "amsat_out"
+      ]
+    ]
+  },
+  {
+    "id": "amsat_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "CelesTrak amateur TLE",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 580,
+    "y": 920,
+    "wires": [
+      [
+        "amsat_out"
+      ]
+    ]
+  },
+  {
+    "id": "amsat_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "AMSAT-active TLE response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 920,
+    "wires": []
+  },
+  {
+    "id": "aurora_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/aurora",
+    "url": "/space/aurora",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 980,
+    "wires": [
+      [
+        "aurora_url"
+      ]
+    ]
+  },
+  {
+    "id": "aurora_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "NOAA OVATION URL",
+    "func": "msg.url='https://services.swpc.noaa.gov/json/ovation_aurora_latest.json';\nmsg.headers={'User-Agent':'ShackClock/1.0.0'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 980,
+    "wires": [
+      [
+        "aurora_http"
+      ]
+    ]
+  },
+  {
+    "id": "aurora_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "NOAA OVATION",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 580,
+    "y": 980,
+    "wires": [
+      [
+        "aurora_out"
+      ]
+    ]
+  },
+  {
+    "id": "aurora_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "NOAA OVATION response",
+    "statusCode": "",
+    "headers": {},
+    "x": 820,
+    "y": 980,
+    "wires": []
+  },
+  {
+    "id": "settings_get_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /settings-config",
+    "url": "/settings-config",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 1220,
+    "wires": [
+      [
+        "settings_get_fn"
+      ]
+    ]
+  },
+  {
+    "id": "settings_get_fn",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Read ShackClock settings",
+    "func": "const fs = global.get('fs');\nfunction readCfg(){ try { return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8')); } catch(e){ return {}; } }\nconst C = readCfg();\nconst V = (k,d='') => Object.prototype.hasOwnProperty.call(C,k) ? C[k] : ((env.get(k)!==undefined && env.get(k)!==null) ? env.get(k) : d);\nconst defs={\"EARTHQUAKE_MIN_MAG\":\"2.5\",\"EARTHQUAKE_MAX_AGE_HOURS\":\"24\",\"AIR_TRAFFIC_ENABLED\":\"true\",\"AIR_TRAFFIC_MODE\":\"worldwide\",\"AIR_TRAFFIC_JSON_URL\":\"\",\"AIR_TRAFFIC_RADIUS_NM\":\"150\",\"AIR_TRAFFIC_REFRESH_SEC\":\"900\",\"OPENSKY_CLIENT_ID\":\"\",\"OPENSKY_CLIENT_SECRET\":\"\",\"CARRIER_ENABLED\":\"true\",\"CARRIER_GEOJSON_URL\":\"\",\"CARRIER_REFRESH_HOURS\":\"6\",\"CARRIER_MAX_AGE_HOURS\":\"336\",\"TZ\":\"America/Los_Angeles\",\"STATION_CALL\":\"N0CALL\",\"STATION_NAME\":\"ShackClock\",\"STATION_LAT\":\"0\",\"STATION_LON\":\"0\",\"STATION_ELEV_M\":\"180\",\"WEEWX_JSON_URL\":\"\",\"LIGHTNING_GEOJSON_URL\":\"\",\"OPENWEATHER_API_KEY\":\"\",\"DX_CLUSTER_ENABLED\":\"true\",\"DX_CLUSTER_HOST\":\"w3lpl.net\",\"DX_CLUSTER_PORT\":\"7373\",\"DX_CLUSTER_CALL\":\"N0CALL\",\"DX_CLUSTER_MAX_AGE_MIN\":\"20\",\"ISS_TLE_URL\":\"https://api.wheretheiss.at/v1/satellites/25544/tles?format=text\",\"POTA_SPOTS_URL\":\"https://api.pota.app/spot/activator\",\"PSKREPORTER_SECONDS\":\"-3600\",\"PSKREPORTER_LIMIT\":\"100\",\"AMSAT_ACTIVE_HOURS\":\"24\",\"CITY1_LABEL\":\"Tokyo\",\"CITY1_TZ\":\"Asia/Tokyo\",\"CITY2_LABEL\":\"Sydney\",\"CITY2_TZ\":\"Australia/Sydney\",\"CITY3_LABEL\":\"London\",\"CITY3_TZ\":\"Europe/London\",\"CITY4_LABEL\":\"New York\",\"CITY4_TZ\":\"America/New_York\",\"CITY5_LABEL\":\"Denver\",\"CITY5_TZ\":\"America/Denver\",\"CITY6_LABEL\":\"Chicago\",\"CITY6_TZ\":\"America/Chicago\",\"CITY7_LABEL\":\"\",\"CITY7_TZ\":\"\",\"CITY8_LABEL\":\"\",\"CITY8_TZ\":\"\"};const keys=[\"EARTHQUAKE_MIN_MAG\", \"EARTHQUAKE_MAX_AGE_HOURS\", \"AIR_TRAFFIC_ENABLED\", \"AIR_TRAFFIC_MODE\", \"AIR_TRAFFIC_JSON_URL\", \"AIR_TRAFFIC_RADIUS_NM\", \"AIR_TRAFFIC_REFRESH_SEC\", \"OPENSKY_CLIENT_ID\", \"OPENSKY_CLIENT_SECRET\", \"CARRIER_ENABLED\", \"CARRIER_GEOJSON_URL\", \"CARRIER_REFRESH_HOURS\", \"CARRIER_MAX_AGE_HOURS\", \"TZ\", \"STATION_CALL\", \"STATION_NAME\", \"STATION_LAT\", \"STATION_LON\", \"STATION_ELEV_M\", \"WEEWX_JSON_URL\", \"LIGHTNING_GEOJSON_URL\", \"OPENWEATHER_API_KEY\", \"DX_CLUSTER_ENABLED\", \"DX_CLUSTER_HOST\", \"DX_CLUSTER_PORT\", \"DX_CLUSTER_CALL\", \"DX_CLUSTER_MAX_AGE_MIN\", \"ISS_TLE_URL\", \"POTA_SPOTS_URL\", \"PSKREPORTER_SECONDS\", \"PSKREPORTER_LIMIT\", \"AMSAT_ACTIVE_HOURS\", \"CITY1_LABEL\", \"CITY1_TZ\", \"CITY2_LABEL\", \"CITY2_TZ\", \"CITY3_LABEL\", \"CITY3_TZ\", \"CITY4_LABEL\", \"CITY4_TZ\", \"CITY5_LABEL\", \"CITY5_TZ\", \"CITY6_LABEL\", \"CITY6_TZ\", \"CITY7_LABEL\", \"CITY7_TZ\", \"CITY8_LABEL\", \"CITY8_TZ\"];const out={};for(const k of keys)out[k]=String(V(k,defs[k]??''));msg.headers={'content-type':'application/json','cache-control':'no-store'};msg.payload=out;return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 1220,
+    "wires": [
+      [
+        "settings_get_out"
+      ]
+    ]
+  },
+  {
+    "id": "settings_get_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "settings response",
+    "statusCode": "",
+    "headers": {},
+    "x": 650,
+    "y": 1220,
+    "wires": []
+  },
+  {
+    "id": "settings_post_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "POST /settings-config",
+    "url": "/settings-config",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 1280,
+    "wires": [
+      [
+        "settings_post_fn"
+      ]
+    ]
+  },
+  {
+    "id": "settings_post_fn",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Save ShackClock settings",
+    "func": "const fs = global.get('fs');\nconst keys=[\"EARTHQUAKE_MIN_MAG\", \"EARTHQUAKE_MAX_AGE_HOURS\", \"AIR_TRAFFIC_ENABLED\", \"AIR_TRAFFIC_MODE\", \"AIR_TRAFFIC_JSON_URL\", \"AIR_TRAFFIC_RADIUS_NM\", \"AIR_TRAFFIC_REFRESH_SEC\", \"OPENSKY_CLIENT_ID\", \"OPENSKY_CLIENT_SECRET\", \"CARRIER_ENABLED\", \"CARRIER_GEOJSON_URL\", \"CARRIER_REFRESH_HOURS\", \"CARRIER_MAX_AGE_HOURS\", \"TZ\", \"STATION_CALL\", \"STATION_NAME\", \"STATION_LAT\", \"STATION_LON\", \"STATION_ELEV_M\", \"WEEWX_JSON_URL\", \"LIGHTNING_GEOJSON_URL\", \"OPENWEATHER_API_KEY\", \"DX_CLUSTER_ENABLED\", \"DX_CLUSTER_HOST\", \"DX_CLUSTER_PORT\", \"DX_CLUSTER_CALL\", \"DX_CLUSTER_MAX_AGE_MIN\", \"ISS_TLE_URL\", \"POTA_SPOTS_URL\", \"PSKREPORTER_SECONDS\", \"PSKREPORTER_LIMIT\", \"AMSAT_ACTIVE_HOURS\", \"CITY1_LABEL\", \"CITY1_TZ\", \"CITY2_LABEL\", \"CITY2_TZ\", \"CITY3_LABEL\", \"CITY3_TZ\", \"CITY4_LABEL\", \"CITY4_TZ\", \"CITY5_LABEL\", \"CITY5_TZ\", \"CITY6_LABEL\", \"CITY6_TZ\", \"CITY7_LABEL\", \"CITY7_TZ\", \"CITY8_LABEL\", \"CITY8_TZ\"];const body=(msg.payload&&typeof msg.payload==='object')?msg.payload:{};const out={};for(const k of keys)if(Object.prototype.hasOwnProperty.call(body,k))out[k]=String(body[k]??'').trim();try{fs.writeFileSync('/data/shackclock-settings.json',JSON.stringify(out,null,2)+'\\n');msg.statusCode=200;msg.payload={ok:true,saved:Object.keys(out).length,note:'Settings apply immediately; DX cluster reconnects automatically within a few seconds.'};}catch(e){msg.statusCode=500;msg.payload={ok:false,error:e.message};}msg.headers={'content-type':'application/json','cache-control':'no-store'};return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 1280,
+    "wires": [
+      [
+        "settings_post_out"
+      ]
+    ]
+  },
+  {
+    "id": "settings_post_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "settings saved",
+    "statusCode": "",
+    "headers": {},
+    "x": 650,
+    "y": 1280,
+    "wires": []
+  },
+  {
+    "id": "iss_state_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /iss/state",
+    "url": "/iss/state",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 420,
+    "wires": [
+      [
+        "iss_state_read"
+      ]
+    ]
+  },
+  {
+    "id": "iss_state_read",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Read server ISS state",
+    "func": "const fs=global.get('fs');\nmsg.headers={'content-type':'application/json','cache-control':'no-store'};\ntry{msg.payload=JSON.parse(fs.readFileSync('/data/iss-state.json','utf8'));msg.statusCode=200;}catch(e){msg.statusCode=503;msg.payload={ok:false,error:'ISS tracker state unavailable: '+e.message};}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 365,
+    "y": 420,
+    "wires": [
+      [
+        "iss_state_out"
+      ]
+    ]
+  },
+  {
+    "id": "iss_state_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "ISS state response",
+    "statusCode": "",
+    "headers": {},
+    "x": 610,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "eq_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /earthquakes",
+    "url": "/earthquakes",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 1360,
+    "wires": [
+      [
+        "eq_url"
+      ]
+    ]
+  },
+  {
+    "id": "eq_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "USGS earthquakes URL",
+    "func": "msg.url='https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson'; msg.headers={'User-Agent':'ShackClock/1.0.0','Accept':'application/geo+json'}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 1360,
+    "wires": [
+      [
+        "eq_http"
+      ]
+    ]
+  },
+  {
+    "id": "eq_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "USGS earthquake GeoJSON",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 600,
+    "y": 1360,
+    "wires": [
+      [
+        "eq_filter"
+      ]
+    ]
+  },
+  {
+    "id": "eq_filter",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Filter earthquakes",
+    "func": "const fs=global.get('fs'); function readCfg(){try{return JSON.parse(fs.readFileSync('/data/shackclock-settings.json','utf8'));}catch(e){return {};}} const C=readCfg(); const V=(k,d='')=>Object.prototype.hasOwnProperty.call(C,k)?C[k]:((env.get(k)!==undefined&&env.get(k)!==null)?env.get(k):d); const min=Number(V('EARTHQUAKE_MIN_MAG',2.5)); const hrs=Number(V('EARTHQUAKE_MAX_AGE_HOURS',24)); const cutoff=Date.now()-Math.max(1,hrs)*3600000; const d=(msg.payload&&typeof msg.payload==='object')?msg.payload:{type:'FeatureCollection',features:[]}; d.features=(Array.isArray(d.features)?d.features:[]).filter(f=>Number(f?.properties?.mag)>=min && Number(f?.properties?.time)>=cutoff); msg.headers={'content-type':'application/geo+json','cache-control':'no-store'}; msg.payload=d; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 820,
+    "y": 1360,
+    "wires": [
+      [
+        "eq_out"
+      ]
+    ]
+  },
+  {
+    "id": "eq_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "earthquake response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1040,
+    "y": 1360,
+    "wires": []
+  },
+  {
+    "id": "air_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /aircraft",
+    "url": "/aircraft",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 1420,
+    "wires": [
+      [
+        "air_url"
+      ]
+    ]
+  },
+  {
+    "id": "air_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Air traffic source",
+    "func": "const fs=global.get('fs');\ntry {\n  const d=JSON.parse(fs.readFileSync('/data/aircraft-cache.json','utf8'));\n  msg.payload=d;\n} catch(e) {\n  msg.payload={ok:false,source:'starting',updatedAt:Date.now(),count:0,ac:[],warning:'Aircraft cache is starting: '+e.message};\n}\nmsg.headers={'content-type':'application/json','cache-control':'no-store'};\nreturn [null,msg];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 1420,
+    "wires": [
+      [
+        "air_http"
+      ],
+      [
+        "air_out"
+      ]
+    ]
+  },
+  {
+    "id": "air_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "Air traffic JSON",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 590,
+    "y": 1400,
+    "wires": [
+      [
+        "air_normalize"
+      ]
+    ]
+  },
+  {
+    "id": "air_normalize",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Normalize air traffic response",
+    "func": "const d=(msg.payload&&typeof msg.payload==='object')?msg.payload:{}; d.source=msg._source||d.source||'air traffic'; msg.headers={'content-type':'application/json','cache-control':'no-store'}; msg.payload=d; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 820,
+    "y": 1400,
+    "wires": [
+      [
+        "air_out"
+      ]
+    ]
+  },
+  {
+    "id": "air_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "air traffic response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1050,
+    "y": 1420,
+    "wires": []
+  },
+  {
+    "id": "carrier_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /carriers",
+    "url": "/carriers",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 1480,
+    "wires": [
+      [
+        "carrier_choose"
+      ]
+    ]
+  },
+  {
+    "id": "carrier_choose",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Public carrier activity source",
+    "func": "const fs=global.get('fs');\ntry {\n  const d=JSON.parse(fs.readFileSync('/data/carrier-cache.json','utf8'));\n  msg.payload=d;\n} catch(e) {\n  msg.payload={type:'FeatureCollection',features:[],source:'starting',updatedAt:Date.now(),approximate:true,warning:'Carrier cache is starting: '+e.message};\n}\nmsg.headers={'content-type':'application/geo+json','cache-control':'no-store'};\nreturn [null,msg];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 1480,
+    "wires": [
+      [
+        "carrier_http"
+      ],
+      [
+        "carrier_out"
+      ]
+    ]
+  },
+  {
+    "id": "carrier_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "Carrier public GeoJSON",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 630,
+    "y": 1460,
+    "wires": [
+      [
+        "carrier_out"
+      ]
+    ]
+  },
+  {
+    "id": "carrier_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "carrier response",
+    "statusCode": "",
+    "headers": {},
+    "x": 870,
+    "y": 1480,
+    "wires": []
+  },
+  {
+    "id": "amsat_meta_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /amateur/status",
+    "url": "/amateur/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 140,
+    "y": 960,
+    "wires": [
+      [
+        "amsat_meta_fn"
+      ]
+    ]
+  },
+  {
+    "id": "amsat_meta_fn",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "AMSAT active status cache",
+    "func": "const fs=global.get('fs');try{msg.payload=JSON.parse(fs.readFileSync('/data/amateur-active-meta.json','utf8'));msg.statusCode=200;}catch(e){msg.payload={ok:false,warning:'AMSAT cache is starting: '+e.message};msg.statusCode=503;}msg.headers={'content-type':'application/json','cache-control':'no-store'};return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 960,
+    "wires": [
+      [
+        "amsat_meta_out"
+      ]
+    ]
+  },
+  {
+    "id": "amsat_meta_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "AMSAT active status response",
+    "statusCode": "",
+    "headers": {},
+    "x": 670,
+    "y": 960,
+    "wires": []
+  }
+]
