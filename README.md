@@ -1,10 +1,60 @@
-# Node-RED ShackClock v1.0.0
+# Node-RED ShackClock v1.1.0
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
 
+## v1.1.0
+
+v1.1.0 adds **DX Summit as a selectable DX spot source** and consolidates the new-user configuration improvements from the previous development build into this release.
+
+### New in v1.1.0
+
+- New `DX_SOURCE` setting: `cluster` or `dxsummit`.
+- Telnet mode continues to support W3LPL, DXSpider, AR-Cluster and compatible nodes.
+- DX Summit mode polls a structured CSV/API URL first and falls back to the legacy `dx100.html` feed.
+- DX Summit JSON, CSV, HTML-table and common plain-text spot formats are normalized into the same ShackClock DX spot structure.
+- DX Summit polling is clamped to **60 seconds or slower**.
+- The Ham Activity ticker identifies the active DX source.
+- Release naming now matches the GitHub project: `node-red-shackclock-v1.1.0.zip`, Docker image `node-red-shackclock:1.1.0`, container `shackclock`, and default volume `shackclock-data`.
+- Includes persistent layer choices, POTA enable/disable, PSKReporter band/mode/global filtering, Metric/Imperial weather, New Zealand timezone guidance and anonymized station defaults.
+
+- Layer checkbox choices now persist in the browser across reloads and restarts.
+- POTA can be disabled completely from Settings with `POTA_ENABLED=false`; the POTA map checkbox is now labeled **POTA MAP** to distinguish the map overlay from the activity feed.
+- PSKReporter supports **station or global scope**, **band filtering**, and **mode filtering** using the documented PSKReporter `mode` and `frange` query parameters. This makes a view such as **Global + 6m + FT8** possible.
+- Weather can be switched between **Imperial** (`°F`, mph, inches) and **Metric** (`°C`, km/h, mm) using `WEATHER_UNITS`.
+- `Pacific/Auckland` is included in the timezone suggestions, and the UI now reminds Southern Hemisphere users to enter latitude as a negative number.
+- Public defaults no longer contain a personal callsign or QTH coordinates.
+
+### DX Summit configuration
+
+Select **SETTINGS → DX Spot Source → DX Summit web feed**, or use:
+
+```text
+DX_SOURCE=dxsummit
+DX_SUMMIT_URL=https://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100
+DX_SUMMIT_FALLBACK_URL=https://www.dxsummit.fi/text/dx100.html
+DX_SUMMIT_REFRESH_SEC=60
+```
+
+The URLs are configurable so the adapter can be adjusted if DX Summit changes its public endpoints or query format.
+
+To return to a normal cluster:
+
+```text
+DX_SOURCE=cluster
+DX_CLUSTER_HOST=w3lpl.net
+DX_CLUSTER_PORT=7373
+DX_CLUSTER_CALL=Your Call
+```
+
+
+
 ## v1.0.0
 
-v1.0.0 is the first release.
+v1.0.0 was the first consolidated release.
+
+It rolls the v0.x development work into one stable baseline and removes the need to follow the historical incremental release notes from earlier builds.
+
+Major fixes and feature additions now included in the v1.0.0 baseline:
 
 - Dockerized all-in-one deployment for macOS and Raspberry Pi
 - persistent configuration stored in the Docker data volume
@@ -35,7 +85,7 @@ v1.0.0 is the first release.
 - public/coarse carrier fallback when USNI blocks automated requests
 - local and UTC clocks
 - up to eight configurable city clocks
-- Docker image/runtime version reporting for `1.0.0`
+- Docker image/runtime version reporting
 - configurable Docker host port with `SHACKCLOCK_PORT` without changing Node-RED's internal port
 - configurable persistent Docker volume name with `SHACKCLOCK_DATA_VOLUME`
 - Docker-safe upgrade behavior that preserves saved settings
@@ -96,7 +146,7 @@ The dashboard displays NOAA/SWPC information including:
 
 The Ham Activity panel includes:
 
-- W3LPL DX Cluster spots
+- DX spots from a telnet cluster or DX Summit
 - latest 10 DX spots
 - POTA spots
 - latest 10 POTA spots
@@ -152,7 +202,32 @@ CelesTrak returning `403 Forbidden` is nonfatal if AMSAT orbital data is already
 
 ### Name matching
 
-Some recently reported satellites may remain unmatched when no usable orbital element exists in the available TLE sources. These are reported in `/api/amateur/status` rather than silently plotted at an inferred location.
+v1.0.0 includes more tolerant AMSAT/TLE name matching.
+
+For example:
+
+```text
+AO-7_[U/v]
+AO-7_[V/a]
+```
+
+are normalized to the TLE identity:
+
+```text
+AO-07
+```
+
+Mode suffixes such as:
+
+```text
+_[VHF_Digi]
+_[UHF_Digi]
+_[Music]
+```
+
+are removed before identity matching.
+
+Some recently reported satellites may still remain unmatched when no usable orbital element exists in the available TLE sources. These are reported in `/api/amateur/status` rather than silently plotted at an inferred location.
 
 ### Satellite diagnostics
 
@@ -167,7 +242,7 @@ A normal result includes:
 ```json
 {
   "ok": true,
-  "helperVersion": "1.0.0",
+  "helperVersion": "1.1.0",
   "hours": 24,
   "source": "AMSAT Satellite Status API summary",
   "orbitalSource": "AMSAT nasabare + AMSAT daily TLE",
@@ -260,7 +335,7 @@ docker compose logs -f | grep '\[AIR\]'
 
 ## Public carrier-status layer
 
-The aircraft carrier layer represents the **11 commissioned U.S. Navy aircraft carriers**.
+The carrier layer represents the **11 commissioned U.S. Navy aircraft carriers**.
 
 It intentionally separates two kinds of public information:
 
@@ -395,6 +470,46 @@ SHACKCLOCK_PORT=8080 docker compose up -d --build
 `SHACKCLOCK_PORT` is a deployment setting and therefore does **not** appear in the in-dashboard Settings dialog.
 
 
+### Weather units
+
+Choose the display system in Settings or `.env`:
+
+```text
+WEATHER_UNITS=imperial
+```
+
+or:
+
+```text
+WEATHER_UNITS=metric
+```
+
+Imperial displays °F, mph and inches. Metric displays °C, km/h and millimetres. OpenWeather is requested in the selected unit system. If you use a custom WeeWX/local JSON source, make sure its values match the selected display units.
+
+### PSKReporter filters
+
+The PSK Paths layer can now be filtered at the source. Useful examples:
+
+```text
+PSKREPORTER_SCOPE=global
+PSKREPORTER_BAND=6m
+PSKREPORTER_MODE=FT8
+```
+
+`PSKREPORTER_SCOPE=station` preserves the original behavior and asks PSKReporter for reports involving your station callsign. `global` removes the callsign restriction and displays recent activity matching the selected band/mode. ShackClock still refreshes PSKReporter no more often than every five minutes.
+
+Supported band choices in the Settings UI include 160m through 70cm, including 6m and 2m. Leave the mode blank for any mode.
+
+### POTA feed
+
+To disable POTA completely rather than merely hiding its map layer:
+
+```text
+POTA_ENABLED=false
+```
+
+The **POTA MAP** checkbox controls only the map overlay and its state is remembered by that browser.
+
 ### Docker data volume
 
 ShackClock stores persistent settings and caches in a named Docker volume.
@@ -464,8 +579,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.0.0.zip
-cd node-red-shackclock-v1.0.0
+unzip node-red-shackclock-v1.1.0.zip
+cd node-red-shackclock-v1.1.0
 ```
 
 Build and start:
@@ -515,7 +630,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.0.0
+cd node-red-shackclock-v1.1.0
 docker compose up -d --build
 ```
 
@@ -535,8 +650,51 @@ chromium \
   http://localhost:4040/
 ```
 
+---
+
+## Upgrading from a v0.x release
+
+Keep the persistent Docker volume.
+
+From the v1.1.0 directory:
+
+```bash
+docker compose build --no-cache
+docker rm -f shackclock 2>/dev/null || true
+docker compose up -d
+```
+
+Do **not** use:
+
+```bash
+docker compose down -v
+```
+
+unless you intentionally want to erase persistent configuration.
+
+Your saved settings live in the Docker data volume and should survive normal container replacement.
+
+If Docker reports that the existing volume was created by an older Compose project name, that is expected when carrying the same persistent ShackClock data volume forward across versioned directories.
 
 ---
+
+### If you used an earlier development package
+
+Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
+
+To keep using the older volume, create `.env` before starting this v1.1.0 release:
+
+```text
+SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
+```
+
+Check existing volumes with:
+
+```bash
+docker volume ls | grep shackclock
+```
+
+Do not delete the old volume until you have confirmed your saved settings are present.
 
 ## Useful Docker checks
 
@@ -553,23 +711,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.0.0 the image should be:
+For v1.1.0 the image should be:
 
 ```text
-node-red-shackclock:1.0.0
+node-red-shackclock:1.1.0
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.0.0 \
+docker image inspect node-red-shackclock:1.1.0 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.0.0
+1.1.0
 ```
 
 The health API also reports the release version and the configured public port:
@@ -584,7 +742,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publicPort": 4040
 }
 ```
@@ -730,7 +888,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.0.0`
+**Version:** `1.1.0`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
@@ -745,13 +903,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 **Node-RED editor:** `http://HOST:PORT/admin`
 
-## Support This Project
 
-If you find this useful, star ⭐ the repo! It helps others discover it.
+## Project repository
 
-73, Dave N3BKV
-
-
-https://hamradiohacks.blogspot.com
-
-https://hamradiohacks.n3bkv.com
+https://github.com/n3bkv/node-red-shackclock

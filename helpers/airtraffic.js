@@ -47,7 +47,7 @@ function normalizeOpenSky(a){
   };
 }
 async function fetchJson(url, opts={}, timeoutMs=20000){
-  const r=await fetch(url,{...opts,headers:{'User-Agent':'ShackClock/1.0.0','Accept':'application/json',...(opts.headers||{})},signal:AbortSignal.timeout(timeoutMs)});
+  const r=await fetch(url,{...opts,headers:{'User-Agent':'ShackClock/1.1.0','Accept':'application/json',...(opts.headers||{})},signal:AbortSignal.timeout(timeoutMs)});
   const text=await r.text();
   let data=null; try{data=JSON.parse(text);}catch(_){}
   if(!r.ok){
@@ -60,7 +60,7 @@ async function openSkyToken(id, secret){
   const now=Date.now();
   if(oauth.token && oauth.expiresAt-now>60000) return oauth.token;
   const body=new URLSearchParams({grant_type:'client_credentials',client_id:id,client_secret:secret});
-  const r=await fetch(OPENSKY_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'ShackClock/1.0.0'},body,signal:AbortSignal.timeout(15000)});
+  const r=await fetch(OPENSKY_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'ShackClock/1.1.0'},body,signal:AbortSignal.timeout(15000)});
   if(!r.ok) throw new Error(`OpenSky auth ${r.status} ${r.statusText}`);
   const d=await r.json(); if(!d.access_token) throw new Error('OpenSky auth returned no access token');
   oauth.token=d.access_token; oauth.expiresAt=now+Math.max(60,Number(d.expires_in||1800))*1000; return oauth.token;

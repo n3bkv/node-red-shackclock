@@ -47,7 +47,11 @@
     "inputs": 0,
     "x": 180,
     "y": 120,
-    "wires": [["weewx_json"]]
+    "wires": [
+      [
+        "weewx_json"
+      ]
+    ]
   },
   {
     "id": "weewx_json",
@@ -59,7 +63,11 @@
     "pretty": false,
     "x": 390,
     "y": 120,
-    "wires": [["weewx_normalize"]]
+    "wires": [
+      [
+        "weewx_normalize"
+      ]
+    ]
   },
   {
     "id": "weewx_normalize",
@@ -74,7 +82,11 @@
     "libs": [],
     "x": 610,
     "y": 120,
-    "wires": [["weewx_debug"]]
+    "wires": [
+      [
+        "weewx_debug"
+      ]
+    ]
   },
   {
     "id": "weewx_debug",

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: node-red-shackclock:1.0.0
+    image: node-red-shackclock:1.1.0
     container_name: shackclock
     restart: unless-stopped
 
@@ -14,14 +14,15 @@ services:
       PORT: "4040"
       SHACKCLOCK_PUBLIC_PORT: ${SHACKCLOCK_PORT:-4040}
       TZ: ${TZ:-America/Los_Angeles}
-      STATION_CALL: ${STATION_CALL:-N0CALL}
-      STATION_NAME: ${STATION_NAME:-ShackClock}
+      STATION_CALL: ${STATION_CALL:-YOURCALL}
+      STATION_NAME: ${STATION_NAME:-YOURCALL ShackClock}
       STATION_LAT: ${STATION_LAT:-0}
       STATION_LON: ${STATION_LON:-0}
-      STATION_ELEV_M: ${STATION_ELEV_M:-180}
+      STATION_ELEV_M: ${STATION_ELEV_M:-0}
       WEEWX_JSON_URL: ${WEEWX_JSON_URL:-}
       LIGHTNING_GEOJSON_URL: ${LIGHTNING_GEOJSON_URL:-}
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      WEATHER_UNITS: ${WEATHER_UNITS:-imperial}
       EARTHQUAKE_MIN_MAG: ${EARTHQUAKE_MIN_MAG:-2.5}
       EARTHQUAKE_MAX_AGE_HOURS: ${EARTHQUAKE_MAX_AGE_HOURS:-24}
       AIR_TRAFFIC_ENABLED: ${AIR_TRAFFIC_ENABLED:-true}
@@ -38,9 +39,17 @@ services:
       DX_CLUSTER_ENABLED: ${DX_CLUSTER_ENABLED:-true}
       DX_CLUSTER_HOST: ${DX_CLUSTER_HOST:-w3lpl.net}
       DX_CLUSTER_PORT: ${DX_CLUSTER_PORT:-7373}
-      DX_CLUSTER_CALL: ${DX_CLUSTER_CALL:-${STATION_CALL:-N0CALL}}
+      DX_CLUSTER_CALL: ${DX_CLUSTER_CALL:-${STATION_CALL:-YOURCALL}}
       DX_CLUSTER_MAX_AGE_MIN: ${DX_CLUSTER_MAX_AGE_MIN:-20}
+      DX_SOURCE: ${DX_SOURCE:-cluster}
+      DX_SUMMIT_URL: ${DX_SUMMIT_URL:-https://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100}
+      DX_SUMMIT_FALLBACK_URL: ${DX_SUMMIT_FALLBACK_URL:-https://www.dxsummit.fi/text/dx100.html}
+      DX_SUMMIT_REFRESH_SEC: ${DX_SUMMIT_REFRESH_SEC:-60}
+      POTA_ENABLED: ${POTA_ENABLED:-true}
       POTA_SPOTS_URL: ${POTA_SPOTS_URL:-https://api.pota.app/spot/activator}
+      PSKREPORTER_SCOPE: ${PSKREPORTER_SCOPE:-station}
+      PSKREPORTER_BAND: ${PSKREPORTER_BAND:-all}
+      PSKREPORTER_MODE: ${PSKREPORTER_MODE:-}
       PSKREPORTER_SECONDS: ${PSKREPORTER_SECONDS:--3600}
       PSKREPORTER_LIMIT: ${PSKREPORTER_LIMIT:-100}
       ISS_TLE_URL: ${ISS_TLE_URL:-https://api.wheretheiss.at/v1/satellites/25544/tles?format=text}

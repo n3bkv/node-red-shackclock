@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.0.0
+/* Node-RED ShackClock v1.1.0
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -6,7 +6,7 @@
 
   const $ = (id) => document.getElementById(id);
   const state = {
-    config: { call: 'N0CALL', lat: 0, lon: 0 },
+    config: { call: 'YOURCALL', lat: 0, lon: 0, weatherUnits:'imperial' },
     map: null,
     layers: {},
     radarTimer: null,
@@ -63,7 +63,7 @@
   let hamRefreshInFlight = null;
   function refreshHamActivity() {
     if (hamRefreshInFlight) return hamRefreshInFlight;
-    hamRefreshInFlight = Promise.allSettled([refreshDXSpots(), refreshPOTA()])
+    hamRefreshInFlight = Promise.allSettled([refreshDXSpots(), ...(state.config.hamFeeds?.pota === false ? [] : [refreshPOTA()])])
       .finally(() => { hamRefreshInFlight = null; });
     return hamRefreshInFlight;
   }
@@ -89,6 +89,27 @@
     }
     $('station-call').textContent = `${state.config.call} WEATHER`;
     document.title = state.config.name || `${state.config.call} ShackClock`;
+  }
+
+  const LAYER_STATE_KEY = 'shackclock.layerState.v1';
+
+  function savedLayerState() {
+    try { return JSON.parse(localStorage.getItem(LAYER_STATE_KEY) || '{}') || {}; }
+    catch (_) { return {}; }
+  }
+
+  function saveLayerState() {
+    const value = {};
+    document.querySelectorAll('[data-layer]').forEach(cb => { value[cb.dataset.layer] = !!cb.checked; });
+    try { localStorage.setItem(LAYER_STATE_KEY, JSON.stringify(value)); } catch (_) {}
+  }
+
+  function setPotaUiEnabled(enabled) {
+    const stat = $('pota-stat'), block = $('pota-recent-block');
+    const grid = document.querySelector('.recent-spots-grid');
+    if (stat) stat.style.display = enabled ? '' : 'none';
+    if (block) block.style.display = enabled ? '' : 'none';
+    if (grid) grid.style.gridTemplateColumns = enabled ? '' : '1fr';
   }
 
   function initMap() {
@@ -178,10 +199,18 @@
     const cloudToggle = document.querySelector('[data-layer="clouds"]');
     const cloudOpacity = $('cloud-opacity');
     const cloudOpacityValue = $('cloud-opacity-value');
+    const stored = savedLayerState();
+
+    // Restore each browser's layer choices before reconciling the Leaflet map.
+    document.querySelectorAll('[data-layer]').forEach(cb => {
+      const name = cb.dataset.layer;
+      if (Object.prototype.hasOwnProperty.call(stored, name)) cb.checked = !!stored[name];
+    });
+
     if (cloudToggle && !state.config.openWeatherConfigured) {
       cloudToggle.checked = false;
       cloudToggle.disabled = true;
-      cloudToggle.parentElement.title = 'Set OPENWEATHER_API_KEY in .env and restart the container';
+      cloudToggle.parentElement.title = 'Set OPENWEATHER_API_KEY in Settings';
       if (cloudOpacity) cloudOpacity.disabled = true;
     }
     const airToggle = document.querySelector('[data-layer="airTraffic"]');
@@ -190,6 +219,19 @@
       airToggle.disabled = true;
       airToggle.parentElement.title = 'Enable air traffic in Settings';
     }
+    const carrierToggle = document.querySelector('[data-layer="carriers"]');
+    if (carrierToggle && state.config.carriers?.enabled === false) {
+      carrierToggle.checked = false;
+      carrierToggle.disabled = true;
+      carrierToggle.parentElement.title = 'Enable carrier activity in Settings';
+    }
+    const potaToggle = document.querySelector('[data-layer="pota"]');
+    if (potaToggle && state.config.hamFeeds?.pota === false) {
+      potaToggle.checked = false;
+      potaToggle.disabled = true;
+      potaToggle.parentElement.title = 'Enable the POTA feed in Settings';
+      setPotaUiEnabled(false);
+    } else setPotaUiEnabled(true);
 
     if (cloudOpacity) {
       cloudOpacity.value = String(Math.round(state.cloudOpacity * 100));
@@ -203,19 +245,24 @@
       });
     }
 
+    function apply(cb) {
+      const name = cb.dataset.layer;
+      const layer = state.layers[name];
+      if (!layer) return;
+      if (cb.checked && !cb.disabled) {
+        if (!state.map.hasLayer(layer)) layer.addTo(state.map);
+        if (name === 'radar') drawRadarFrame();
+      } else if (state.map.hasLayer(layer)) state.map.removeLayer(layer);
+    }
+
     document.querySelectorAll('[data-layer]').forEach(cb => {
+      apply(cb);
       cb.addEventListener('change', () => {
-        const name = cb.dataset.layer;
-        const layer = state.layers[name];
-        if (!layer) return;
-        if (cb.checked) {
-          layer.addTo(state.map);
-          if (name === 'radar') drawRadarFrame();
-        } else {
-          state.map.removeLayer(layer);
-        }
+        apply(cb);
+        saveLayerState();
       });
     });
+    saveLayerState();
     $('view-local').onclick = () => state.map.setView([state.config.lat, state.config.lon], 7);
     $('view-usa').onclick = () => state.map.setView([38.5, -98.5], 4);
     $('view-world').onclick = () => state.map.setView([20, -20], 2);
@@ -328,12 +375,17 @@
       const clouds = first(d, ['clouds','cloudiness','current.clouds']);
       const description = first(d, ['description','weatherDescription','current.description']);
 
+      const metric = String(d.units || state.config.weatherUnits || 'imperial').toLowerCase() === 'metric';
+      const tempUnit = d.tempUnit || (metric ? 'C' : 'F');
+      const windUnit = d.windUnit || (metric ? 'km/h' : 'mph');
+      const rainUnit = d.rainUnit || (metric ? 'mm' : 'in');
       $('temp').textContent = fmtNum(temp,0);
-      $('feels').textContent = `${fmtNum(feels ?? temp,0)}°`;
+      if ($('temp-unit')) $('temp-unit').textContent = tempUnit;
+      $('feels').textContent = `${fmtNum(feels ?? temp,0)}°${tempUnit}`;
       $('rh').textContent = `${fmtNum(rh,0)}%`;
-      $('dew').textContent = `${fmtNum(dew,0)}°`;
-      $('wind').textContent = `${dir !== undefined ? fmtWindDir(dir) + ' ' : ''}${fmtNum(wind,0)}`.trim();
-      $('rain').textContent = rain !== undefined ? fmtNum(rain,2) : '--';
+      $('dew').textContent = `${fmtNum(dew,0)}°${tempUnit}`;
+      $('wind').textContent = `${dir !== undefined ? fmtWindDir(dir) + ' ' : ''}${fmtNum(wind,0)} ${windUnit}`.trim();
+      $('rain').textContent = rain !== undefined ? `${fmtNum(rain,2)} ${rainUnit}` : '--';
       $('rain-label').textContent = d.source === 'OpenWeather' ? 'Rain 1h' : 'Rain';
       $('station-source').textContent = d.source ? `· ${d.source}` : '';
       $('weather-condition').textContent = [description, clouds !== undefined ? `Clouds ${fmtNum(clouds,0)}%` : ''].filter(Boolean).join(' · ');
@@ -356,12 +408,18 @@
     try {
       const d = await getJSON('/api/forecast');
       const periods = d?.properties?.periods?.slice(0,3) || [];
-      $('forecast').innerHTML = periods.map(p => `
+      const metric = String(state.config.weatherUnits || 'imperial').toLowerCase() === 'metric';
+      $('forecast').innerHTML = periods.map(p => {
+        let t=Number(p.temperature), u=String(p.temperatureUnit||'F').toUpperCase();
+        if(Number.isFinite(t) && metric && u==='F'){t=(t-32)*5/9;u='C';}
+        else if(Number.isFinite(t) && !metric && u==='C'){t=t*9/5+32;u='F';}
+        return `
         <div class="forecast-day">
           <div class="name">${escapeHtml(p.name || '')}</div>
-          <div class="f-temp">${p.temperature ?? '--'}°</div>
+          <div class="f-temp">${Number.isFinite(t)?Math.round(t):'--'}°${u}</div>
           <div class="desc">${escapeHtml(p.shortForecast || '')}</div>
-        </div>`).join('') || '<div class="muted">Forecast unavailable</div>';
+        </div>`;
+      }).join('') || '<div class="muted">Forecast unavailable</div>';
     } catch (e) {
       console.warn('Forecast:', e);
       $('forecast').innerHTML = '<div class="muted">NWS unavailable</div>';
@@ -750,11 +808,16 @@
       }
       $('dx-count').textContent=String(spots.length||mapped);
       renderRecentDX(spots);
-      const s=spots[0]; if(s) $('spot-ticker').textContent=`${raw?.connected?'● ':''}DX ${first(s,['spotted','dx','call','callsign'])||''} ${first(s,['frequency','freq','qrg'])||''} ${first(s,['message','comment','mode'])||''}`.trim(); else if(raw?.connected) $('spot-ticker').textContent=`● ${raw.host||'DX cluster'} connected · waiting for spots`;
+      const s=spots[0]; const sourceLabel=raw?.sourceLabel||raw?.host||'DX'; if(s) $('spot-ticker').textContent=`${raw?.connected?'● ':''}${sourceLabel} · ${first(s,['spotted','dx','call','callsign'])||''} ${first(s,['frequency','freq','qrg'])||''} ${first(s,['message','comment','mode'])||''}`.trim(); else if(raw?.connected) $('spot-ticker').textContent=`● ${sourceLabel} · waiting for spots`;
     } catch(e){console.warn('DX spots:',e);$('dx-count').textContent='--'; if($('dx-recent')) $('dx-recent').innerHTML='<div class="spot-empty">DX feed unavailable</div>';}
   }
 
   async function refreshPOTA() {
+    if (state.config.hamFeeds?.pota === false) {
+      state.layers.pota.clearLayers(); $('pota-count').textContent='OFF';
+      if($('pota-recent')) $('pota-recent').innerHTML='<div class="spot-empty">POTA feed disabled</div>';
+      return;
+    }
     try {
       const raw=await getJSON(freshApiUrl('/api/pota')); const spots=Array.isArray(raw)?raw:(raw?.data||[]);
       state.layers.pota.clearLayers(); let mapped=0;
@@ -772,6 +835,9 @@
 
   async function refreshPSK() {
     try {
+      const pc=state.config.pskReporter||{};
+      const parts=['PSK', pc.band&&pc.band!=='all'?pc.band:'', pc.mode||''].filter(Boolean);
+      if($('psk-label')) $('psk-label').textContent=parts.length>1?parts.join(' '):'PSK paths';
       const xml=await getText('/api/psk',20000); const doc=new DOMParser().parseFromString(xml,'application/xml');
       const reports=[...doc.querySelectorAll('receptionReport')]; state.layers.pskPaths.clearLayers(); let n=0;
       for (const r of reports.slice(-120)) {
@@ -1045,10 +1111,10 @@
 
   const ENV_SETTINGS = [
     'TZ','STATION_CALL','STATION_NAME','STATION_LAT','STATION_LON','STATION_ELEV_M',
-    'WEEWX_JSON_URL','LIGHTNING_GEOJSON_URL','OPENWEATHER_API_KEY',
+    'WEEWX_JSON_URL','LIGHTNING_GEOJSON_URL','OPENWEATHER_API_KEY','WEATHER_UNITS',
     'EARTHQUAKE_MIN_MAG','EARTHQUAKE_MAX_AGE_HOURS','AIR_TRAFFIC_ENABLED','AIR_TRAFFIC_MODE','AIR_TRAFFIC_JSON_URL','AIR_TRAFFIC_RADIUS_NM','AIR_TRAFFIC_REFRESH_SEC','OPENSKY_CLIENT_ID','OPENSKY_CLIENT_SECRET','CARRIER_ENABLED','CARRIER_GEOJSON_URL','CARRIER_REFRESH_HOURS','CARRIER_MAX_AGE_HOURS',
-    'DX_CLUSTER_ENABLED','DX_CLUSTER_HOST','DX_CLUSTER_PORT','DX_CLUSTER_CALL','DX_CLUSTER_MAX_AGE_MIN',
-    'ISS_TLE_URL','POTA_SPOTS_URL','PSKREPORTER_SECONDS','PSKREPORTER_LIMIT','AMSAT_ACTIVE_HOURS',
+    'DX_CLUSTER_ENABLED','DX_SOURCE','DX_CLUSTER_HOST','DX_CLUSTER_PORT','DX_CLUSTER_CALL','DX_CLUSTER_MAX_AGE_MIN','DX_SUMMIT_URL','DX_SUMMIT_FALLBACK_URL','DX_SUMMIT_REFRESH_SEC',
+    'ISS_TLE_URL','POTA_ENABLED','POTA_SPOTS_URL','PSKREPORTER_SCOPE','PSKREPORTER_BAND','PSKREPORTER_MODE','PSKREPORTER_SECONDS','PSKREPORTER_LIMIT','AMSAT_ACTIVE_HOURS',
     'CITY1_LABEL','CITY1_TZ','CITY2_LABEL','CITY2_TZ','CITY3_LABEL','CITY3_TZ','CITY4_LABEL','CITY4_TZ','CITY5_LABEL','CITY5_TZ','CITY6_LABEL','CITY6_TZ','CITY7_LABEL','CITY7_TZ','CITY8_LABEL','CITY8_TZ'
   ];
 
@@ -1160,7 +1226,7 @@
     setInterval(refreshForecast,30*60*1000);
     setInterval(refreshSpaceWeather,5*60*1000);
     setInterval(refreshDXSpots,15*1000);
-    setInterval(refreshPOTA,60*1000);
+    setInterval(() => { if(state.config.hamFeeds?.pota !== false) refreshPOTA(); },60*1000);
     setInterval(refreshPSK,5*60*1000);
     setInterval(refreshAmateurSatData,15*60*1000);
     setInterval(refreshAurora,5*60*1000);
