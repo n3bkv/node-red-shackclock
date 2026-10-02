@@ -1,6 +1,41 @@
-# Node-RED ShackClock v1.1.1
+# Node-RED ShackClock v1.1.2
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.2
+
+v1.1.2 fixes PSKReporter handling and separates station-history queries from the live global feed.
+
+### Fixed in v1.1.2
+
+- Station scope continues to use the PSKReporter retrieval API and explicitly requests an uncompressed XML response.
+- The station response path safely handles binary/gzip/deflate responses and always returns `application/xml`.
+- Global scope now uses the public PSKReporter MQTT feed instead of sending an unsupported no-callsign query to the historical retrieval API.
+- Global band/mode filters are applied at the MQTT broker whenever practical. For example, **Global + 6m + FT8** subscribes to `pskr/filter/v2/6m/FT8/#`.
+- Global all-band mode uses PSKReporter's documented `v2raw_1pc` 1% sample to avoid consuming the full worldwide firehose; any selected mode is then filtered locally.
+- MQTT spots are kept in a rolling local cache in the persistent `/data` volume and exposed through the existing `/api/psk` XML endpoint, so the map UI does not need a separate protocol.
+- Added `/api/psk/status` for MQTT connection/topic/cache diagnostics.
+
+The public MQTT service is anonymous. ShackClock connects to `mqtt.pskreporter.info:1883` only while PSKReporter scope is set to **Global activity**.
+
+Useful checks:
+
+```bash
+curl -s http://localhost:4040/api/config | python3 -m json.tool
+curl -s http://localhost:4040/api/psk/status | python3 -m json.tool
+curl -s http://localhost:4040/api/psk | head -30
+```
+
+For a worldwide 6 m FT8 view, use:
+
+```text
+PSKREPORTER_SCOPE=global
+PSKREPORTER_BAND=6m
+PSKREPORTER_MODE=FT8
+```
+
+The MQTT feed is live/forward-looking: after switching to Global scope, ShackClock begins collecting matching spots from that point forward rather than back-filling the previous hour.
+
 
 ## v1.1.1
 
@@ -266,7 +301,7 @@ A normal result includes:
 ```json
 {
   "ok": true,
-  "helperVersion": "1.1.1",
+  "helperVersion": "1.1.2",
   "hours": 24,
   "source": "AMSAT Satellite Status API summary",
   "orbitalSource": "AMSAT nasabare + AMSAT daily TLE",
@@ -603,8 +638,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.1.zip
-cd node-red-shackclock-v1.1.1
+unzip node-red-shackclock-v1.1.2.zip
+cd node-red-shackclock-v1.1.2
 ```
 
 Build and start:
@@ -654,7 +689,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.1
+cd node-red-shackclock-v1.1.2
 docker compose up -d --build
 ```
 
@@ -680,7 +715,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.1 directory:
+From the v1.1.2 directory:
 
 ```bash
 docker compose build --no-cache
@@ -706,7 +741,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.1 release:
+To keep using the older volume, create `.env` before starting this v1.1.2 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -735,23 +770,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.1 the image should be:
+For v1.1.2 the image should be:
 
 ```text
-node-red-shackclock:1.1.1
+node-red-shackclock:1.1.2
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.1 \
+docker image inspect node-red-shackclock:1.1.2 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.1.1
+1.1.2
 ```
 
 The health API also reports the release version and the configured public port:
@@ -766,7 +801,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publicPort": 4040
 }
 ```
@@ -912,7 +947,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.1`
+**Version:** `1.1.2`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
