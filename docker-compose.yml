@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: node-red-shackclock:1.1.2
+    image: node-red-shackclock:1.1.3
     container_name: shackclock
     restart: unless-stopped
 
