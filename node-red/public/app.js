@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.2
+/* Node-RED ShackClock v1.1.3
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -1227,17 +1227,31 @@
     setInterval(refreshSpaceWeather,5*60*1000);
     setInterval(refreshDXSpots,15*1000);
     setInterval(() => { if(state.config.hamFeeds?.pota !== false) refreshPOTA(); },60*1000);
-    setInterval(refreshPSK,5*60*1000);
+    // Global PSK data is already collected continuously by the local MQTT helper,
+    // so redraw it every minute. Station scope uses the PSKReporter retrieval API
+    // and intentionally keeps the more conservative five-minute poll interval.
+    const pskScope = String(state.config.pskReporter?.scope || 'station').toLowerCase();
+    const pskRefreshMs = pskScope === 'global' ? 60*1000 : 5*60*1000;
+    setInterval(refreshPSK,pskRefreshMs);
     setInterval(refreshAmateurSatData,15*60*1000);
     setInterval(refreshAurora,5*60*1000);
     setInterval(healthCheck,15*1000);
 
     // A normal browser reload, tab return, or window focus should immediately
-    // repoll the live local DX cache and POTA feed rather than waiting for timers.
-    window.addEventListener('pageshow', () => refreshHamActivity());
-    window.addEventListener('focus', () => refreshHamActivity());
+    // repoll live ham activity and PSK paths rather than waiting for timers.
+    // Browser events can fire back-to-back, so debounce them for two seconds.
+    let lastReturnRefresh = 0;
+    const refreshLiveOnReturn = () => {
+      const now = Date.now();
+      if (now - lastReturnRefresh < 2000) return;
+      lastReturnRefresh = now;
+      refreshHamActivity();
+      refreshPSK();
+    };
+    window.addEventListener('pageshow', refreshLiveOnReturn);
+    window.addEventListener('focus', refreshLiveOnReturn);
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refreshHamActivity();
+      if (!document.hidden) refreshLiveOnReturn();
     });
 
     toast('ShackClock loaded');
