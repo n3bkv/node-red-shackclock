@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-VERSION="1.1.1"
+VERSION="1.1.2"
 MARKER="/data/.shackclock-version"
 CURRENT=""
 echo "[ShackClock] Node-RED ShackClock v$VERSION"
@@ -45,6 +45,8 @@ node /opt/shackclock/helpers/carriertracker.js &
 CARRIERPID=$!
 node /opt/shackclock/helpers/amsats.js &
 AMSATPID=$!
-cleanup(){ kill "$DXPID" "$ISSPID" "$AIRPID" "$CARRIERPID" "$AMSATPID" 2>/dev/null || true; }
+node /opt/shackclock/helpers/pskreporter-mqtt.js &
+PSKPID=$!
+cleanup(){ kill "$DXPID" "$ISSPID" "$AIRPID" "$CARRIERPID" "$AMSATPID" "$PSKPID" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 exec /usr/src/node-red/entrypoint.sh "$@"
