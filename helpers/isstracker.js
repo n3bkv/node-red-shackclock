@@ -122,7 +122,7 @@ async function fetchOne(url) {
   const ac=new AbortController();
   const timer=setTimeout(()=>ac.abort(),15000);
   try {
-    const r=await fetch(url,{headers:{'User-Agent':'ShackClock/1.1.0','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},signal:ac.signal,cache:'no-store'});
+    const r=await fetch(url,{headers:{'User-Agent':'ShackClock/1.1.1','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},signal:ac.signal,cache:'no-store'});
     const body=await r.text();
     if (!r.ok) {
       const err=new Error(`orbit-data HTTP ${r.status}`);
