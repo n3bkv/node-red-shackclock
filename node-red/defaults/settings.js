@@ -20,7 +20,7 @@ module.exports = {
     },
 
     disableEditor: false,
-    functionGlobalContext: { fs: require('fs') },
+    functionGlobalContext: { fs: require('fs'), zlib: require('zlib') },
     logging: {
         console: { level: 'info', metrics: false, audit: false }
     },
