@@ -47,7 +47,7 @@ function reportStatus(r={}){return String(r.status||r.report||r.value||r.state||
 function activeStatus(v=''){const s=String(v).toLowerCase();return s==='heard'||s==='crew active'||s.includes('sat/mode active')||s==='active';}
 function browserHeaders(accept='application/json'){
   return {
-    'User-Agent':'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0 Safari/537.36 ShackClock/1.1.1',
+    'User-Agent':'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0 Safari/537.36 ShackClock/1.1.2',
     'Accept':accept,
     'Accept-Language':'en-US,en;q=0.9',
     'Referer':'https://www.amsat.org/status/',
@@ -206,9 +206,9 @@ async function poll(){
  const matchedKeys=new Set(filtered.map(x=>canonicalName(x.name)));
  const unmatched=names.filter(n=>!matchedKeys.has(canonicalName(n)));
  const combinedWarning=[active.warning||'',orbital.warning||''].filter(Boolean).join(' | ');
- const meta={ok:true,helperVersion:'1.1.1',updatedAt:Date.now(),hours,source:active.source,sourceUrl:active.sourceUrl||'',fallback:!!active.fallback,orbitalSource:orbital.source,orbitalSourceUrl:orbital.sourceUrl||'',orbitalCached:!!orbital.cached,activeReports:names.length,activeTleCount:filtered.length,reportStats:stats,unmatched:unmatched.slice(0,40),warning:combinedWarning};
+ const meta={ok:true,helperVersion:'1.1.2',updatedAt:Date.now(),hours,source:active.source,sourceUrl:active.sourceUrl||'',fallback:!!active.fallback,orbitalSource:orbital.source,orbitalSourceUrl:orbital.sourceUrl||'',orbitalCached:!!orbital.cached,activeReports:names.length,activeTleCount:filtered.length,reportStats:stats,unmatched:unmatched.slice(0,40),warning:combinedWarning};
  writeMeta(meta);
  if(combinedWarning)console.warn(`[AMSAT] ${combinedWarning}`);
  console.log(`[AMSAT] ${active.source}: ${names.length} active names; ${filtered.length} matched orbital entries; orbitals=${orbital.source}${unmatched.length?`; ${unmatched.length} unmatched`:''}`);
 }
-(async function main(){console.log('[AMSAT] active amateur-satellite filter starting v1.1.1');while(true){try{await poll();}catch(e){console.warn('[AMSAT] poll failed:',e.message);writeMeta({ok:false,helperVersion:'1.1.1',updatedAt:Date.now(),source:'AMSAT active satellite filter',warning:e.message});}await delay(REFRESH_MS);}})();
+(async function main(){console.log('[AMSAT] active amateur-satellite filter starting v1.1.2');while(true){try{await poll();}catch(e){console.warn('[AMSAT] poll failed:',e.message);writeMeta({ok:false,helperVersion:'1.1.2',updatedAt:Date.now(),source:'AMSAT active satellite filter',warning:e.message});}await delay(REFRESH_MS);}})();
