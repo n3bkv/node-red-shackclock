@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: node-red-shackclock:1.1.0
+    image: node-red-shackclock:1.1.1
     container_name: shackclock
     restart: unless-stopped
 
@@ -42,8 +42,8 @@ services:
       DX_CLUSTER_CALL: ${DX_CLUSTER_CALL:-${STATION_CALL:-YOURCALL}}
       DX_CLUSTER_MAX_AGE_MIN: ${DX_CLUSTER_MAX_AGE_MIN:-20}
       DX_SOURCE: ${DX_SOURCE:-cluster}
-      DX_SUMMIT_URL: ${DX_SUMMIT_URL:-https://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100}
-      DX_SUMMIT_FALLBACK_URL: ${DX_SUMMIT_FALLBACK_URL:-https://www.dxsummit.fi/text/dx100.html}
+      DX_SUMMIT_URL: ${DX_SUMMIT_URL:-http://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100}
+      DX_SUMMIT_FALLBACK_URL: ${DX_SUMMIT_FALLBACK_URL:-http://www.dxsummit.fi/text/dx100.html}
       DX_SUMMIT_REFRESH_SEC: ${DX_SUMMIT_REFRESH_SEC:-60}
       POTA_ENABLED: ${POTA_ENABLED:-true}
       POTA_SPOTS_URL: ${POTA_SPOTS_URL:-https://api.pota.app/spot/activator}
