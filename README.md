@@ -1,6 +1,20 @@
-# Node-RED ShackClock v1.1.2
+# Node-RED ShackClock v1.1.3
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.3
+
+v1.1.3 makes PSK paths feel more live without increasing load on the PSKReporter retrieval API.
+
+### Changed in v1.1.3
+
+- **Global PSK/MQTT scope** redraws PSK paths from ShackClock's local MQTT cache every **60 seconds**.
+- **Station PSK/query scope** keeps the existing **5-minute** refresh interval to avoid unnecessarily increasing requests to the PSKReporter retrieval API.
+- Returning to the ShackClock tab/window immediately refreshes PSK paths along with ham activity.
+- Return/focus refresh events are debounced for two seconds so overlapping browser events do not cause duplicate refreshes.
+
+The MQTT collector itself remains continuous; the 60-second interval controls only how often the browser redraws the cached Global PSK paths.
+
 
 ## v1.1.2
 
@@ -638,8 +652,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.2.zip
-cd node-red-shackclock-v1.1.2
+unzip node-red-shackclock-v1.1.3.zip
+cd node-red-shackclock-v1.1.3
 ```
 
 Build and start:
@@ -689,7 +703,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.2
+cd node-red-shackclock-v1.1.3
 docker compose up -d --build
 ```
 
@@ -715,7 +729,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.2 directory:
+From the v1.1.3 directory:
 
 ```bash
 docker compose build --no-cache
@@ -741,7 +755,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.2 release:
+To keep using the older volume, create `.env` before starting this v1.1.3 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -770,16 +784,16 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.2 the image should be:
+For v1.1.3 the image should be:
 
 ```text
-node-red-shackclock:1.1.2
+node-red-shackclock:1.1.3
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.2 \
+docker image inspect node-red-shackclock:1.1.3 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
@@ -801,7 +815,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "publicPort": 4040
 }
 ```
@@ -947,7 +961,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.2`
+**Version:** `1.1.3`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
