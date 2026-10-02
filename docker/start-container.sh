@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-VERSION="1.1.0"
+VERSION="1.1.1"
 MARKER="/data/.shackclock-version"
 CURRENT=""
 echo "[ShackClock] Node-RED ShackClock v$VERSION"
@@ -29,6 +29,11 @@ ISS_MIGRATION_MARKER="/data/.shackclock-v0.12.1-iss-source"
 if [ ! -f "$ISS_MIGRATION_MARKER" ]; then
   node /opt/shackclock/helpers/migrate-v0121-settings.js || true
   : > "$ISS_MIGRATION_MARKER"
+fi
+DXSUMMIT_MIGRATION_MARKER="/data/.shackclock-v1.1.1-dxsummit-http"
+if [ ! -f "$DXSUMMIT_MIGRATION_MARKER" ]; then
+  node /opt/shackclock/helpers/migrate-v111-dxsummit-http.js || true
+  : > "$DXSUMMIT_MIGRATION_MARKER"
 fi
 node /opt/shackclock/helpers/dxcluster.js &
 DXPID=$!
