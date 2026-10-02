@@ -1,6 +1,6 @@
 FROM nodered/node-red:latest
 
-ARG SHACKCLOCK_VERSION=1.1.1
+ARG SHACKCLOCK_VERSION=1.1.2
 LABEL org.opencontainers.image.title="Node-RED ShackClock" \
       org.opencontainers.image.version="${SHACKCLOCK_VERSION}"
 ENV SHACKCLOCK_VERSION="${SHACKCLOCK_VERSION}"
@@ -14,7 +14,7 @@ COPY --chown=node-red:node-red docker/start-container.sh /opt/shackclock/start-c
 # the optional amateur-satellite layer. Install one pinned copy under helpers.
 USER root
 RUN cd /opt/shackclock/helpers \
- && npm install --omit=dev --no-save satellite.js@6.0.2 \
+ && npm install --omit=dev --no-save satellite.js@6.0.2 mqtt@5.16.0 \
  && mkdir -p /opt/shackclock/public/vendor \
  && cp /opt/shackclock/helpers/node_modules/satellite.js/dist/satellite.min.js /opt/shackclock/public/vendor/satellite.min.js \
  && (cp /opt/shackclock/helpers/node_modules/satellite.js/LICENSE.md /opt/shackclock/public/vendor/satellite.LICENSE.txt 2>/dev/null || cp /opt/shackclock/helpers/node_modules/satellite.js/LICENSE /opt/shackclock/public/vendor/satellite.LICENSE.txt 2>/dev/null || true) \
