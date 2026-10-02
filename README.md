@@ -1,6 +1,30 @@
-# Node-RED ShackClock v1.1.0
+# Node-RED ShackClock v1.1.1
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.1
+
+v1.1.1 is a DX Summit connectivity bug-fix release.
+
+### Fixed in v1.1.1
+
+- Replaced Node's built-in `fetch()`/Undici path for DX Summit with the native Node `http`/`https` clients.
+- Forces IPv4 for DX Summit requests. This avoids a reproducible connection timeout seen with hostname-based `fetch()` from the Docker container even though DNS, TCP, and `http.get()` work normally.
+- Changed the default DX Summit endpoints to the currently working HTTP URLs.
+- Automatically migrates the exact v1.1.0 saved HTTPS DX Summit defaults to HTTP when an existing persistent Docker volume is upgraded.
+- Follows up to five HTTP redirects and preserves support for user-configured HTTP or HTTPS DX Summit URLs.
+- DX Summit network failures now report the underlying error code/message instead of only `fetch failed`.
+- Existing telnet-cluster support is unchanged.
+
+Default DX Summit settings:
+
+```text
+DX_SOURCE=dxsummit
+DX_SUMMIT_URL=http://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100
+DX_SUMMIT_FALLBACK_URL=http://www.dxsummit.fi/text/dx100.html
+DX_SUMMIT_REFRESH_SEC=60
+```
+
 
 ## v1.1.0
 
@@ -30,8 +54,8 @@ Select **SETTINGS → DX Spot Source → DX Summit web feed**, or use:
 
 ```text
 DX_SOURCE=dxsummit
-DX_SUMMIT_URL=https://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100
-DX_SUMMIT_FALLBACK_URL=https://www.dxsummit.fi/text/dx100.html
+DX_SUMMIT_URL=http://www.dxsummit.fi/api/v1/spots?content_type=csv&limit=100
+DX_SUMMIT_FALLBACK_URL=http://www.dxsummit.fi/text/dx100.html
 DX_SUMMIT_REFRESH_SEC=60
 ```
 
@@ -242,7 +266,7 @@ A normal result includes:
 ```json
 {
   "ok": true,
-  "helperVersion": "1.1.0",
+  "helperVersion": "1.1.1",
   "hours": 24,
   "source": "AMSAT Satellite Status API summary",
   "orbitalSource": "AMSAT nasabare + AMSAT daily TLE",
@@ -579,8 +603,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.0.zip
-cd node-red-shackclock-v1.1.0
+unzip node-red-shackclock-v1.1.1.zip
+cd node-red-shackclock-v1.1.1
 ```
 
 Build and start:
@@ -630,7 +654,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.0
+cd node-red-shackclock-v1.1.1
 docker compose up -d --build
 ```
 
@@ -656,7 +680,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.0 directory:
+From the v1.1.1 directory:
 
 ```bash
 docker compose build --no-cache
@@ -682,7 +706,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.0 release:
+To keep using the older volume, create `.env` before starting this v1.1.1 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -711,23 +735,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.0 the image should be:
+For v1.1.1 the image should be:
 
 ```text
-node-red-shackclock:1.1.0
+node-red-shackclock:1.1.1
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.0 \
+docker image inspect node-red-shackclock:1.1.1 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.1.0
+1.1.1
 ```
 
 The health API also reports the release version and the configured public port:
@@ -742,7 +766,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publicPort": 4040
 }
 ```
@@ -888,7 +912,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.0`
+**Version:** `1.1.1`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
