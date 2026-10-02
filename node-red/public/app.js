@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.0
+/* Node-RED ShackClock v1.1.1
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
