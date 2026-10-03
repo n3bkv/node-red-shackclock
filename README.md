@@ -1,6 +1,18 @@
-# Node-RED ShackClock v1.1.3
+# Node-RED ShackClock v1.1.4
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.4
+
+v1.1.4 makes PSKReporter paths easier to see and user-configurable.
+
+### Changed in v1.1.4
+
+- Added **PSK path color**, **thickness**, **opacity**, and **high-visibility outline** controls to both ShackClock Settings interfaces.
+- New default PSK trace style is bright cyan (`#00e5ff`), **2 px**, **80% opacity**.
+- High-visibility mode is enabled by default and draws a subtle dark outline under each PSK path so traces remain visible across bright clouds, dark oceans, terrain and labels.
+- PSK display settings are persisted in `/data/shackclock-settings.json` and survive Docker upgrades.
+- Existing v1.1.3 installations require no migration; if the new settings are absent, v1.1.4 uses the new defaults automatically.
 
 ## v1.1.3
 
@@ -652,8 +664,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.3.zip
-cd node-red-shackclock-v1.1.3
+unzip node-red-shackclock-v1.1.4.zip
+cd node-red-shackclock-v1.1.4
 ```
 
 Build and start:
@@ -703,7 +715,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.3
+cd node-red-shackclock-v1.1.4
 docker compose up -d --build
 ```
 
@@ -729,7 +741,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.3 directory:
+From the v1.1.4 directory:
 
 ```bash
 docker compose build --no-cache
@@ -755,7 +767,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.3 release:
+To keep using the older volume, create `.env` before starting this v1.1.4 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -787,13 +799,13 @@ docker inspect shackclock \
 For v1.1.3 the image should be:
 
 ```text
-node-red-shackclock:1.1.3
+node-red-shackclock:1.1.4
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.3 \
+docker image inspect node-red-shackclock:1.1.4 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
@@ -815,7 +827,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "publicPort": 4040
 }
 ```
@@ -961,7 +973,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.3`
+**Version:** `1.1.4`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
