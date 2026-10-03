@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.3
+/* Node-RED ShackClock v1.1.4
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -844,7 +844,12 @@
         const tx=maidenheadToLatLon(r.getAttribute('senderLocator')); const rx=maidenheadToLatLon(r.getAttribute('receiverLocator'));
         if(!tx||!rx) continue;
         const f=Number(r.getAttribute('frequency')); const mode=r.getAttribute('mode')||''; const sc=r.getAttribute('senderCallsign')||''; const rc=r.getAttribute('receiverCallsign')||'';
-        L.polyline([tx,rx],{color:'#ff77df',weight:1,opacity:.42,className:'psk-path'}).bindTooltip(`${sc} → ${rc} ${freqBand(f)} ${mode}`).addTo(state.layers.pskPaths); n++;
+        const pathColor=/^#[0-9a-f]{6}$/i.test(String(pc.pathColor||''))?String(pc.pathColor):'#00e5ff';
+        const pathWeight=Math.min(6,Math.max(1,Number(pc.pathWeight)||2));
+        const pathOpacity=Math.min(1,Math.max(.1,Number(pc.pathOpacity)||.8));
+        const highVisibility=pc.highVisibility!==false;
+        if(highVisibility) L.polyline([tx,rx],{color:'#061018',weight:pathWeight+3,opacity:Math.min(.85,pathOpacity),interactive:false,className:'psk-path-outline'}).addTo(state.layers.pskPaths);
+        L.polyline([tx,rx],{color:pathColor,weight:pathWeight,opacity:pathOpacity,className:'psk-path'}).bindTooltip(`${sc} → ${rc} ${freqBand(f)} ${mode}`).addTo(state.layers.pskPaths); n++;
       }
       $('psk-count').textContent=String(n);
     } catch(e){console.warn('PSKReporter:',e);$('psk-count').textContent='--';}
@@ -1114,7 +1119,7 @@
     'WEEWX_JSON_URL','LIGHTNING_GEOJSON_URL','OPENWEATHER_API_KEY','WEATHER_UNITS',
     'EARTHQUAKE_MIN_MAG','EARTHQUAKE_MAX_AGE_HOURS','AIR_TRAFFIC_ENABLED','AIR_TRAFFIC_MODE','AIR_TRAFFIC_JSON_URL','AIR_TRAFFIC_RADIUS_NM','AIR_TRAFFIC_REFRESH_SEC','OPENSKY_CLIENT_ID','OPENSKY_CLIENT_SECRET','CARRIER_ENABLED','CARRIER_GEOJSON_URL','CARRIER_REFRESH_HOURS','CARRIER_MAX_AGE_HOURS',
     'DX_CLUSTER_ENABLED','DX_SOURCE','DX_CLUSTER_HOST','DX_CLUSTER_PORT','DX_CLUSTER_CALL','DX_CLUSTER_MAX_AGE_MIN','DX_SUMMIT_URL','DX_SUMMIT_FALLBACK_URL','DX_SUMMIT_REFRESH_SEC',
-    'ISS_TLE_URL','POTA_ENABLED','POTA_SPOTS_URL','PSKREPORTER_SCOPE','PSKREPORTER_BAND','PSKREPORTER_MODE','PSKREPORTER_SECONDS','PSKREPORTER_LIMIT','AMSAT_ACTIVE_HOURS',
+    'ISS_TLE_URL','POTA_ENABLED','POTA_SPOTS_URL','PSKREPORTER_SCOPE','PSKREPORTER_BAND','PSKREPORTER_MODE','PSKREPORTER_SECONDS','PSKREPORTER_LIMIT','PSK_PATH_COLOR','PSK_PATH_WEIGHT','PSK_PATH_OPACITY','PSK_PATH_HIGH_VISIBILITY','AMSAT_ACTIVE_HOURS',
     'CITY1_LABEL','CITY1_TZ','CITY2_LABEL','CITY2_TZ','CITY3_LABEL','CITY3_TZ','CITY4_LABEL','CITY4_TZ','CITY5_LABEL','CITY5_TZ','CITY6_LABEL','CITY6_TZ','CITY7_LABEL','CITY7_TZ','CITY8_LABEL','CITY8_TZ'
   ];
 
