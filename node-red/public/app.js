@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.4
+/* Node-RED ShackClock v1.1.5
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -268,13 +268,32 @@
     $('view-world').onclick = () => state.map.setView([20, -20], 2);
   }
 
+  function safeBrowserTimeZone(value) {
+    const tz = String(value || '').trim();
+    if (!tz) return undefined;
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone:tz }).format(new Date());
+      return tz;
+    } catch (_) {
+      return 'UTC';
+    }
+  }
+
   function updateClocks() {
     const d = new Date();
-    const tz = state.config.timezone || undefined;
+    const tz = safeBrowserTimeZone(state.config.timezone);
+    const tzWarning = state.config.timezoneWarning || (tz === 'UTC' && state.config.timezone && state.config.timezone !== 'UTC' ? `Invalid timezone "${state.config.timezone}"; using UTC.` : '');
     $('local-clock').textContent = d.toLocaleTimeString([], { timeZone:tz, hour:'numeric', minute:'2-digit', second:'2-digit' });
     $('utc-clock').textContent = d.toLocaleTimeString('en-US', { timeZone:'UTC', hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
     $('date-local').textContent = d.toLocaleDateString([], { timeZone:tz, weekday:'short', year:'numeric', month:'short', day:'numeric' });
     $('date-utc').textContent = d.toLocaleDateString('en-US', { timeZone:'UTC', weekday:'short', year:'numeric', month:'short', day:'numeric' }) + ' UTC';
+    if (tzWarning) {
+      $('local-clock').title = tzWarning;
+      $('date-local').title = tzWarning;
+    } else {
+      $('local-clock').removeAttribute('title');
+      $('date-local').removeAttribute('title');
+    }
     updateCityClocks(d);
     if (state.weatherUpdated) $('station-age').textContent = ageText(state.weatherUpdated);
     if (state.spaceUpdated) $('space-age').textContent = ageText(state.spaceUpdated);
