@@ -14,6 +14,7 @@ v1.1.5 fixes a startup failure caused by an invalid main timezone setting.
 - Timezones must use a valid **IANA timezone** such as `America/New_York`, `America/Los_Angeles`, `Europe/London`, or `Pacific/Auckland`.
 - Spaces in timezone identifiers are normalized to underscores, so `America/New York` becomes `America/New_York`.
 - Invalid short names such as `New York` are rejected with a clear error rather than breaking the dashboard.
+- Radar animation now resets frame readiness after a map pan/zoom or LOCAL/USA/WORLD view change, keeping the first newly loaded radar frame visible and cycling only through frames that are ready for the new viewport.
 
 ## v1.1.4
 
