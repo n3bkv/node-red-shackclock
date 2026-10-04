@@ -263,6 +263,7 @@
       });
     });
     saveLayerState();
+    state.map.on('movestart zoomstart', beginRadarViewChange);
     $('view-local').onclick = () => state.map.setView([state.config.lat, state.config.lon], 7);
     $('view-usa').onclick = () => state.map.setView([38.5, -98.5], 4);
     $('view-world').onclick = () => state.map.setView([20, -20], 2);
@@ -567,6 +568,12 @@
     state.radarCurrentLayer = newLayers[firstReady];
     state.radarCurrentLayer.setOpacity(0.72);
 
+    // Track tile readiness again after every map move/zoom. The initial ready[]
+    // state above applies only to the viewport used during preload.
+    newLayers.forEach(layer => {
+      layer.on('load', () => radarLayerLoaded(layer));
+    });
+
     // Cross-fade off the old frame only after the replacement is visible.
     if (oldCurrent && oldCurrent !== state.radarCurrentLayer) oldCurrent.setOpacity(0);
     setTimeout(() => oldLayers.forEach(l => {
@@ -576,9 +583,36 @@
     scheduleNextRadarFrame();
   }
 
+  function beginRadarViewChange() {
+    if (!state.radarLayers.length) return;
+    clearTimeout(state.radarTimer);
+    // A pan/zoom requires a new set of tiles for every animation frame.
+    // Do not keep cycling based on readiness from the previous map view.
+    state.radarReady = state.radarLayers.map(() => false);
+  }
+
+  function radarLayerLoaded(layer) {
+    const idx = state.radarLayers.indexOf(layer);
+    if (idx < 0) return;
+    state.radarReady[idx] = true;
+
+    // If the currently selected frame has not finished loading for this view,
+    // immediately show the first frame that has. This keeps radar visible while
+    // the remaining animation frames continue loading in the background.
+    if (!state.radarReady[state.radarIndex]) {
+      if (state.radarCurrentLayer && state.radarCurrentLayer !== layer) {
+        state.radarCurrentLayer.setOpacity(0);
+      }
+      layer.setOpacity(0.72);
+      state.radarCurrentLayer = layer;
+      state.radarIndex = idx;
+    }
+    scheduleNextRadarFrame();
+  }
+
   function scheduleNextRadarFrame() {
     clearTimeout(state.radarTimer);
-    if (!state.radarLayers.length) return;
+    if (!state.radarLayers.length || !state.radarReady.some(Boolean)) return;
     const newest = state.radarIndex === state.radarLayers.length - 1;
     const delay = newest ? 2800 : 1400;
     state.radarTimer = setTimeout(() => {
@@ -606,9 +640,19 @@
   }
 
   function drawRadarFrame() {
-    // Kept for layer-toggle compatibility. Frames are already preloaded; this
-    // simply ensures the current ready frame is visible when RADAR is re-enabled.
-    if (state.radarCurrentLayer) state.radarCurrentLayer.setOpacity(0.72);
+    // Kept for layer-toggle compatibility. If the previously selected frame is
+    // still loading for the current viewport, show any frame that is ready.
+    let idx = state.radarIndex;
+    if (!state.radarReady[idx]) idx = state.radarReady.findIndex(Boolean);
+    if (idx >= 0 && state.radarLayers[idx]) {
+      if (state.radarCurrentLayer && state.radarCurrentLayer !== state.radarLayers[idx]) {
+        state.radarCurrentLayer.setOpacity(0);
+      }
+      state.radarIndex = idx;
+      state.radarCurrentLayer = state.radarLayers[idx];
+      state.radarCurrentLayer.setOpacity(0.72);
+      scheduleNextRadarFrame();
+    }
   }
 
   async function refreshLightning() {
