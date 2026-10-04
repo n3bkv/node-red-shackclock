@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-  <title>ShackClock v1.1.5</title>
+  <title>ShackClock v1.1.6</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="/style.css?v=1.1.5" />
 </head>
@@ -125,7 +125,8 @@
       <div class="settings-dialog-header">
         <div>
           <div class="eyebrow">SHACKCLOCK SETTINGS</div>
-          <div class="settings-subtitle">Application settings are saved in Docker's persistent volume. Deployment settings such as <code>SHACKCLOCK_PORT</code> are set in the project <code>.env</code> file.</div>
+          <div class="settings-subtitle">Settings saved here are stored in Docker's persistent volume and <strong>override matching values in <code>.env</code></strong>. Rebuilding or replacing the container does not erase them. Deployment settings such as <code>SHACKCLOCK_PORT</code> remain in <code>.env</code>.</div>
+          <div id="ui-settings-source" class="settings-source-note" role="note"></div>
         </div>
         <button id="close-settings" class="settings-close" type="button" aria-label="Close settings">×</button>
       </div>
@@ -245,7 +246,7 @@
       <div class="settings-dialog-actions">
         <span id="ui-settings-status" role="status"></span>
         <div>
-          <button id="reset-ui-settings" class="settings-secondary" type="button">RESET TO .ENV / DEFAULTS</button>
+          <button id="reset-ui-settings" class="settings-secondary" type="button">DISCARD SAVED SETTINGS · USE .ENV / DEFAULTS</button>
           <button id="reload-ui-settings" class="settings-secondary" type="button">RELOAD</button>
           <button class="settings-primary" type="submit">SAVE & APPLY</button>
         </div>
