@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.5
+/* Node-RED ShackClock v1.1.6
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -1197,6 +1197,14 @@
         const el = form.elements.namedItem(key);
         if (el) el.value = d[key] ?? '';
       }
+      const source = $('ui-settings-source');
+      if (source) {
+        const savedCount = Number(d?._meta?.savedCount || 0);
+        source.classList.toggle('saved-active', savedCount > 0);
+        source.textContent = savedCount > 0
+          ? `Persistent dashboard settings are active (${savedCount} saved values). They override matching .env values and survive Docker rebuilds. Saving this form stores the displayed settings in the Docker data volume.`
+          : 'No dashboard settings are currently saved. Values shown come from .env when present, otherwise from ShackClock defaults. Saving this form will create persistent dashboard settings.';
+      }
       status.textContent = 'Loaded';
     } catch (e) {
       status.textContent = `Load failed: ${e.message}`;
@@ -1229,7 +1237,7 @@
   }
 
   async function resetUiSettings() {
-    if (!confirm('Clear saved UI settings and fall back to .env / packaged defaults?')) return;
+    if (!confirm('Discard all settings saved through the ShackClock dashboard? The Docker volume will remain intact, but application settings will fall back to .env values where present and then packaged defaults.')) return;
     const status = $('ui-settings-status');
     status.textContent = 'Resetting…';
     try {
