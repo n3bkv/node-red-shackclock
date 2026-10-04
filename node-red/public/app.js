@@ -1278,7 +1278,12 @@
       if (!document.hidden) refreshLiveOnReturn();
     });
 
-    toast('ShackClock loaded');
+    if (state.config.timezoneWarning) {
+      console.warn('Timezone:', state.config.timezoneWarning);
+      toast(state.config.timezoneWarning);
+    } else {
+      toast('ShackClock loaded');
+    }
   }
 
   window.addEventListener('error', e => console.error('ShackClock error:',e.error || e.message));
