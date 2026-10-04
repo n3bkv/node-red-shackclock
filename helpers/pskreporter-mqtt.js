@@ -3,7 +3,7 @@
 const fs = require('fs');
 const mqtt = require('mqtt');
 
-const VERSION = '1.1.5';
+const VERSION = '1.1.6';
 const CFG = '/data/shackclock-settings.json';
 const CACHE = '/data/psk-mqtt-cache.json';
 const BROKER = process.env.PSKREPORTER_MQTT_URL || 'mqtt://mqtt.pskreporter.info:1883';
