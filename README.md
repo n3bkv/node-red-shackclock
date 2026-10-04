@@ -1,6 +1,19 @@
-# Node-RED ShackClock v1.1.4
+# Node-RED ShackClock v1.1.5
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.5
+
+v1.1.5 fixes a startup failure caused by an invalid main timezone setting.
+
+### Fixed in v1.1.5
+
+- An invalid main timezone can no longer stop browser initialization and leave most dashboard panels blank.
+- ShackClock now falls back to **UTC** if an existing saved or environment timezone is invalid, allowing weather, ISS, DX, clocks and the other feeds to continue loading.
+- Settings now validates the main timezone and all city-clock timezones before saving.
+- Timezones must use a valid **IANA timezone** such as `America/New_York`, `America/Los_Angeles`, `Europe/London`, or `Pacific/Auckland`.
+- Spaces in timezone identifiers are normalized to underscores, so `America/New York` becomes `America/New_York`.
+- Invalid short names such as `New York` are rejected with a clear error rather than breaking the dashboard.
 
 ## v1.1.4
 
@@ -664,8 +677,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.4.zip
-cd node-red-shackclock-v1.1.4
+unzip node-red-shackclock-v1.1.5.zip
+cd node-red-shackclock-v1.1.5
 ```
 
 Build and start:
@@ -715,7 +728,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.4
+cd node-red-shackclock-v1.1.5
 docker compose up -d --build
 ```
 
@@ -741,7 +754,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.4 directory:
+From the v1.1.5 directory:
 
 ```bash
 docker compose build --no-cache
@@ -767,7 +780,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.4 release:
+To keep using the older volume, create `.env` before starting this v1.1.5 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -799,13 +812,13 @@ docker inspect shackclock \
 For v1.1.3 the image should be:
 
 ```text
-node-red-shackclock:1.1.4
+node-red-shackclock:1.1.5
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.4 \
+docker image inspect node-red-shackclock:1.1.5 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
@@ -827,7 +840,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publicPort": 4040
 }
 ```
@@ -973,7 +986,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.4`
+**Version:** `1.1.5`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
