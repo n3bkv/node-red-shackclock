@@ -1,6 +1,19 @@
-# Node-RED ShackClock v1.1.5
+# Node-RED ShackClock v1.1.6
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.6
+
+v1.1.6 makes ShackClock's configuration precedence visible and easier to troubleshoot.
+
+### Changed in v1.1.6
+
+- Both Settings interfaces now show whether persistent dashboard settings are active.
+- When dashboard settings are present, ShackClock shows the number of saved values and warns that they override matching `.env` values.
+- The Settings UI now explicitly explains that saved values live in the persistent Docker data volume and survive image rebuilds and container replacement.
+- The standalone `/settings.html` page now includes the same **discard saved settings / use .env / defaults** control as the in-dashboard Settings dialog.
+- Resetting application settings leaves the Docker volume intact; it clears the saved application values so ShackClock falls back to `.env` and then packaged defaults.
+- Documentation now describes the exact setting precedence and clarifies that rebuilding the Docker image does not overwrite `/data/shackclock-settings.json`.
 
 ## v1.1.5
 
@@ -509,15 +522,23 @@ City clocks are sorted by their current local date/time rather than by configura
 
 Click **SETTINGS** in the Layers panel for normal application settings.
 
-Most application settings are stored persistently in the Docker data volume. Deployment-level settings such as the Docker host port are intentionally kept in the project `.env` file because Docker must know the port mapping before the web UI starts.
+Most application settings can be set from the ShackClock Settings UI and are stored persistently in the Docker data volume. Deployment-level settings such as the Docker host port remain in the project `.env` file because Docker must know the port mapping before the web UI starts.
 
-Saved settings are stored persistently in:
+For application settings, ShackClock uses this precedence:
+
+1. A value saved through the ShackClock Settings UI
+2. The matching container environment value, normally supplied from `.env`
+3. The packaged ShackClock default
+
+Saved application settings are stored in:
 
 ```text
 /data/shackclock-settings.json
 ```
 
-The persistent Docker volume survives normal upgrades.
+Because `/data` is a persistent Docker volume, rebuilding the image or replacing the container does **not** overwrite those saved values. For example, if `TZ` was previously saved through the dashboard, later changing `TZ` in `.env` will not change the effective timezone until the saved dashboard setting is changed or discarded.
+
+Both Settings interfaces show whether persistent dashboard settings are active. Use **DISCARD SAVED SETTINGS · USE .ENV / DEFAULTS** to clear the saved application settings and return to the lower-precedence `.env` / packaged values. This does not delete the Docker volume or its other cached data.
 
 
 ### Docker web port
@@ -678,8 +699,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.5.zip
-cd node-red-shackclock-v1.1.5
+unzip node-red-shackclock-v1.1.6.zip
+cd node-red-shackclock-v1.1.6
 ```
 
 Build and start:
@@ -729,7 +750,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.5
+cd node-red-shackclock-v1.1.6
 docker compose up -d --build
 ```
 
@@ -755,7 +776,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.5 directory:
+From the v1.1.6 directory:
 
 ```bash
 docker compose build --no-cache
@@ -781,7 +802,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.5 release:
+To keep using the older volume, create `.env` before starting this v1.1.6 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -810,23 +831,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.3 the image should be:
+For v1.1.6 the image should be:
 
 ```text
-node-red-shackclock:1.1.5
+node-red-shackclock:1.1.6
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.5 \
+docker image inspect node-red-shackclock:1.1.6 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.1.2
+1.1.6
 ```
 
 The health API also reports the release version and the configured public port:
@@ -841,7 +862,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "publicPort": 4040
 }
 ```
@@ -987,7 +1008,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.5`
+**Version:** `1.1.6`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 
