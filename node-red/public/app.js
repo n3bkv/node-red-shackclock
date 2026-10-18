@@ -446,6 +446,62 @@
     }
   }
 
+
+  // Solar mode is a per-display preference; it does not alter server settings.
+  const SOLAR_MODE_KEY = 'shackclock.solarMode.v1';
+  const SOLAR_URLS = {
+    continuum: 'https://services.swpc.noaa.gov/images/animations/sdo-hmii/latest.jpg',
+    ultraviolet: 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg'
+  };
+  const solarLastGood = {};
+  let solarMode = 'sunspots';
+  function readSolarMode() {
+    try {
+      const v = localStorage.getItem(SOLAR_MODE_KEY);
+      return ['off', 'sunspots', 'dual'].includes(v) ? v : 'sunspots';
+    } catch (_) { return 'sunspots'; }
+  }
+  function applySolarMode(mode) {
+    solarMode = ['off', 'sunspots', 'dual'].includes(mode) ? mode : 'sunspots';
+    $('solar-panel').hidden = solarMode === 'off';
+    $('solar-uv-frame').hidden = solarMode !== 'dual';
+    $('solar-images').classList.toggle('dual', solarMode === 'dual');
+    const setting = $('solar-mode-setting');
+    if (setting) setting.value = solarMode;
+    if (solarMode !== 'off') refreshSolarImages();
+  }
+  function refreshSolarImages() {
+    if (solarMode === 'off') return;
+    const status = $('solar-status');
+    const targets = [['continuum', 'solar-continuum']];
+    if (solarMode === 'dual') targets.push(['ultraviolet', 'solar-ultraviolet']);
+    const now = new Date();
+    const stamp = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    let remaining = targets.length, failures = 0;
+    status.textContent = 'Updating…';
+    status.classList.remove('error');
+    targets.forEach(([kind, id]) => {
+      const img = $(id);
+      // Preload: a failed source must not replace the last successfully loaded image.
+      const candidate = new Image();
+      candidate.onload = () => {
+        img.src = candidate.src;
+        solarLastGood[kind] = now;
+        finish();
+      };
+      candidate.onerror = () => { failures++; finish(); };
+      candidate.src = SOLAR_URLS[kind] + '?t=' + Date.now();
+    });
+    function finish() {
+      if (--remaining !== 0) return;
+      if (!failures) status.textContent = 'NASA SDO · NOAA SWPC · checked ' + stamp;
+      else {
+        status.textContent = failures === targets.length ? 'Solar feed unavailable · showing last image if available' : 'One solar feed unavailable · last image retained';
+        status.classList.add('error');
+      }
+    }
+  }
+
   async function refreshSpaceWeather() {
     try {
       const [kpData, fluxData, scales] = await Promise.all([
@@ -1267,6 +1323,8 @@
     $('reload-ui-settings').addEventListener('click', loadUiSettings);
     $('reset-ui-settings').addEventListener('click', resetUiSettings);
     form.addEventListener('submit', saveUiSettings);
+    const solarSetting = $('solar-mode-setting');
+    if (solarSetting) solarSetting.value = readSolarMode();
     $('toggle-key').addEventListener('click', () => {
       const key = $('owm-key');
       const showing = key.type === 'text';
@@ -1281,6 +1339,7 @@
   async function init() {
     await loadConfig();
     initSettingsUi();
+    applySolarMode(readSolarMode());
     initCityClocks();
     initMap();
     updateClocks();
@@ -1301,6 +1360,7 @@
     setInterval(refreshStation,15*1000);
     setInterval(refreshForecast,30*60*1000);
     setInterval(refreshSpaceWeather,5*60*1000);
+    setInterval(refreshSolarImages,15*60*1000);
     setInterval(refreshDXSpots,15*1000);
     setInterval(() => { if(state.config.hamFeeds?.pota !== false) refreshPOTA(); },60*1000);
     // Global PSK data is already collected continuously by the local MQTT helper,
