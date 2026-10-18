@@ -35,3 +35,15 @@
 .layer-source-status{display:flex;justify-content:space-between;gap:7px;margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.08);font-size:6.5px;color:#7f9bac;white-space:nowrap;overflow:hidden}.layer-source-status span{overflow:hidden;text-overflow:ellipsis}
 
 .aircraft-canvas-layer{z-index:460;image-rendering:auto}
+
+/* v1.1.7 solar imagery: preserve the existing left-side layout */
+.solar-panel{padding:10px 12px}
+.solar-panel[hidden],.solar-uv[hidden]{display:none!important}
+.solar-images{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin-top:7px}
+.solar-images.dual{grid-template-columns:repeat(2,minmax(0,1fr))}
+.solar-frame{margin:0;min-width:0;text-align:center}
+.solar-frame img{display:block;width:100%;aspect-ratio:1/1;object-fit:contain;background:#000;border-radius:4px}
+.solar-frame figcaption{color:#aab4be;font-size:9px;margin-top:4px}
+.solar-source{color:#8fa0ad;font-size:9px;text-align:center;margin-top:6px}
+.solar-source.error{color:#ff8888}
+@media(max-height:850px){.solar-frame img{max-height:clamp(100px,23vh,220px)}}

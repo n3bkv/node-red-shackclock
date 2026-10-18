@@ -1,12 +1,16 @@
-# Node-RED ShackClock v1.1.6
+# Node-RED ShackClock v1.1.7
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
 
+## v1.1.7
+
+Adds optional live solar imagery to the left side of the dashboard below the existing NOAA space-weather metrics. Open **LAYERS → SETTINGS → Solar imagery** to select Off, Sunspots (default), or Sunspots + ultraviolet. Images refresh every 15 minutes while retaining the last successfully loaded image if the next request fails. The display preference uses browser localStorage and is specific to each browser/display, unlike server-side station settings. The visible-light image is NOAA SWPC's SDO/HMI continuum feed; the 304 Å ultraviolet image comes from NASA SDO.
+
 ## v1.1.6
 
-v1.1.6 makes ShackClock's configuration precedence visible and easier to troubleshoot.
+v1.1.7 makes ShackClock's configuration precedence visible and easier to troubleshoot.
 
-### Changed in v1.1.6
+### Changed in v1.1.7
 
 - Both Settings interfaces now show whether persistent dashboard settings are active.
 - When dashboard settings are present, ShackClock shows the number of saved values and warns that they override matching `.env` values.
@@ -699,8 +703,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.6.zip
-cd node-red-shackclock-v1.1.6
+unzip node-red-shackclock-v1.1.7.zip
+cd node-red-shackclock-v1.1.7
 ```
 
 Build and start:
@@ -750,7 +754,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.6
+cd node-red-shackclock-v1.1.7
 docker compose up -d --build
 ```
 
@@ -776,7 +780,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.6 directory:
+From the v1.1.7 directory:
 
 ```bash
 docker compose build --no-cache
@@ -802,7 +806,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.6 release:
+To keep using the older volume, create `.env` before starting this v1.1.7 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -831,23 +835,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.6 the image should be:
+For v1.1.7 the image should be:
 
 ```text
-node-red-shackclock:1.1.6
+node-red-shackclock:1.1.7
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.6 \
+docker image inspect node-red-shackclock:1.1.7 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.1.6
+1.1.7
 ```
 
 The health API also reports the release version and the configured public port:
@@ -862,7 +866,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "publicPort": 4040
 }
 ```
@@ -1008,7 +1012,7 @@ Check current provider policies before redistribution or large-scale deployment.
 
 ## Release status
 
-**Version:** `1.1.6`
+**Version:** `1.1.7`
 
 **Default dashboard port:** `4040` (configurable with `SHACKCLOCK_PORT`)
 

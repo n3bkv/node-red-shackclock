@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-  <title>ShackClock v1.1.6</title>
+  <title>ShackClock v1.1.7</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="/style.css?v=1.1.6" />
 </head>
@@ -35,6 +35,21 @@
         <div><span>Geomagnetic</span><b id="g-scale">G-</b></div>
         <div><span>HF</span><b id="hf-condition">--</b></div>
       </div>
+    </section>
+
+    <section class="glass solar-panel" id="solar-panel" aria-label="Solar imagery">
+      <div class="eyebrow">SOLAR IMAGERY · NASA SDO</div>
+      <div class="solar-images" id="solar-images">
+        <figure class="solar-frame">
+          <img id="solar-continuum" alt="Current SDO HMI continuum image of the Sun showing sunspots" decoding="async">
+          <figcaption>SUNSPOTS · HMI</figcaption>
+        </figure>
+        <figure class="solar-frame solar-uv" id="solar-uv-frame" hidden>
+          <img id="solar-ultraviolet" alt="Current SDO AIA 304 angstrom ultraviolet solar image" decoding="async">
+          <figcaption>UV · AIA 304 Å</figcaption>
+        </figure>
+      </div>
+      <div class="solar-source" id="solar-status" role="status">Loading solar imagery…</div>
     </section>
 
     <section class="glass ham-panel">
@@ -184,6 +199,20 @@
             </label>
             <label class="settings-wide">WeeWX JSON URL<input name="WEEWX_JSON_URL" type="url" placeholder="Optional local weather-station endpoint"></label>
             <label class="settings-wide">Lightning GeoJSON URL<input name="LIGHTNING_GEOJSON_URL" type="url" placeholder="Optional GeoJSON lightning feed"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Solar imagery</legend>
+          <div class="settings-grid">
+            <label>Solar image display
+              <select id="solar-mode-setting" name="SOLAR_IMAGE_MODE">
+                <option value="off">Off</option>
+                <option value="sunspots">Sunspots · HMI continuum</option>
+                <option value="dual">Sunspots + ultraviolet 304 Å</option>
+              </select>
+              <small>Shown below Space Weather on the left. Refreshes every 15 minutes. This display setting is stored in this browser.</small>
+            </label>
           </div>
         </fieldset>
 
