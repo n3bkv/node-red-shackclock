@@ -1253,6 +1253,7 @@
         const el = form.elements.namedItem(key);
         if (el) el.value = d[key] ?? '';
       }
+      if ($('solar-mode-setting')) $('solar-mode-setting').value = readSolarMode();
       const source = $('ui-settings-source');
       if (source) {
         const savedCount = Number(d?._meta?.savedCount || 0);
@@ -1285,6 +1286,8 @@
       });
       const out = await r.json();
       if (!r.ok || !out.ok) throw new Error(out.error || `${r.status}`);
+      const selectedSolarMode = $('solar-mode-setting')?.value || 'sunspots';
+      try { localStorage.setItem(SOLAR_MODE_KEY, selectedSolarMode); } catch (_) {}
       status.textContent = 'Saved. Applying…';
       setTimeout(() => location.reload(), 450);
     } catch (e) {
