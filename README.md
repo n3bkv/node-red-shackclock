@@ -2,6 +2,22 @@
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
 
+## Public carrier reports: persistent manual import (v1.1.8)
+
+USNI may return Cloudflare 403 challenges to automated RSS/archive requests. ShackClock keeps its existing read-only automated attempts, but **Settings → Carrier Data** accepts a manually reviewed public GeoJSON report. A successful import updates the map immediately and is saved under `/data/carrier-import.json` in the persistent Docker volume. The carrier helper prefers that import on every poll and will not overwrite it with the bundled September 21 snapshot. A newer cached report is also protected from older automatic results.
+
+A report includes `type: "FeatureCollection"`, `source`, `sourceUrl` (HTTPS), ISO 8601 `sourceDate`, and 1–11 carrier Point features. Each feature requires `properties.hull` (CVN-68 through CVN-78), `properties.region` (public *approximate* area), and `properties.category` (`deployed`, `reference`, or `maintenance`). Unspecified fleet members revert to static homeport/maintenance **references**, not historical deployed coordinates. Only import observations supported by the original public report.
+
+Example of one reported carrier (illustrative **only**, not real deployment data):
+
+```json
+{"type":"FeatureCollection","source":"Reviewed public report","sourceUrl":"https://example.org/report","sourceDate":"2026-10-18T12:00:00Z","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-125,35]},"properties":{"hull":"CVN-68","region":"Example general ocean region","category":"reference"}}]}
+```
+
+Check `GET /api/carriers` for the current `sourceDate`, source URL, `manualImport`, and counts. Settings has a **Clear imported report** control; after clearing, restart ShackClock to resume automatic retrieval/fallback. The import POST endpoint is administrative: do not expose it on a public network without an authentication layer.
+
+---
+
 ## v1.1.8 — MUF, solar history, and satellite passes
 
 This release builds on **v1.1.7 solar imagery** and includes:
