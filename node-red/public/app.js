@@ -1182,35 +1182,67 @@
   }
 
   async function refreshCarriers() {
+    const st=$('carrier-source-status');
     if (state.config.carriers?.enabled === false) {
-      const st=$('carrier-source-status'); if(st) st.textContent='CARRIERS · DISABLED';
+      if(st) st.textContent='CARRIERS · DISABLED';
+      state.layers.carriers.clearLayers();
       return;
     }
     try {
       const d=await getJSON(freshApiUrl('/api/carriers'),20000);
       const features=Array.isArray(d?.features)?d.features:[];
-      const st=$('carrier-source-status');
-      if(st) st.textContent=d?.counts?`CARRIERS · ${features.length} · ${d.counts.deployed} DEPLOYED`:`CARRIERS · ${features.length} · ${d?.source?.includes('USNI')?'USNI':'CUSTOM'}`;
       state.layers.carriers.clearLayers();
-      const maxAge=Number(state.config.carriers?.maxAgeHours||336)*3600000;
-      for (const f of features.slice(0,100)) {
-        const c=f?.geometry?.coordinates;
-        if (f?.geometry?.type!=='Point'||!Array.isArray(c)||c.length<2) continue;
-        let lon=Number(c[0]),lat=Number(c[1]); if(!Number.isFinite(lat)||!Number.isFinite(lon)) continue;
-        const t=featureTimestampMs(f.properties||{}); if(Number.isFinite(t)&&Date.now()-t>maxAge) continue;
-        // Deliberately coarse. Built-in USNI data is region-level, not precise live tracking.
-        lat=Math.round(lat); lon=Math.round(lon);
-        const name=f?.properties?.name||f?.properties?.ship||f?.properties?.callsign||'Carrier';
-        const hull=f?.properties?.hull||'';
-        const region=f?.properties?.region||f?.properties?.area||'';
-        const status=f?.properties?.status||'';
-        const category=f?.properties?.category|| (f?.properties?.deployed?'deployed':'reference');
-        const icon=L.divIcon({className:'',html:`<div class="carrier-icon ${escapeHtml(category)}">CVN</div>`,iconSize:[28,18],iconAnchor:[14,9]});
-        L.marker([lat,lon],{icon,zIndexOffset:category==='deployed'?650:500}).bindTooltip(`${escapeHtml(name)}${hull?` · ${escapeHtml(hull)}`:''}${region?` · ${escapeHtml(region)}`:''}${status?` · ${escapeHtml(status)}`:''} · public/approx.`).addTo(state.layers.carriers);
+      const sourceMs=Date.parse(d?.sourceDate||'');
+      const sourceAgeDays=Number.isFinite(sourceMs)?Math.max(0,Math.floor((Date.now()-sourceMs)/86400000)):null;
+      const stale=sourceAgeDays===null || sourceAgeDays>7 || !!d?.warning;
+      const sourceNote=sourceAgeDays===null?'SOURCE DATE UNKNOWN':sourceAgeDays+'D OLD';
+      if(st) {
+        const deployed=d?.counts?.deployed ?? features.filter(f=>f?.properties?.deployed).length;
+        st.textContent='CARRIERS · '+features.length+' · '+deployed+' LAST REPORTED DEPLOYED · '+sourceNote+(stale?' · STALE':'');
+        st.title=(d?.warning||'')+' · Source: '+(d?.source||'unspecified')+' · Deployment data is not live tracking';
       }
-      if(d?.warning) console.warn('Carrier source:',d.warning);
+      const groups=new Map();
+      const maxAge=Number(state.config.carriers?.maxAgeHours||336)*3600000;
+      for(const f of features.slice(0,100)){
+        const c=f?.geometry?.coordinates;
+        if(f?.geometry?.type!=='Point'||!Array.isArray(c)||c.length<2)continue;
+        const lon=Number(c[0]),lat=Number(c[1]);if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+        const p=f.properties||{};
+        const category=String(p.category||(p.deployed?'deployed':'reference'));
+        const t=featureTimestampMs(p);
+        // Preserve historical records but flag them. Do not suppress the entire
+        // deployed fleet just because public reporting has aged out.
+        const old=Number.isFinite(t)&&Date.now()-t>maxAge;
+        const historic=category==='deployed'&&(stale||old);
+        const roundedLat=Math.round(lat),roundedLon=Math.round(lon);
+        const key=roundedLat+','+roundedLon;
+        if(!groups.has(key))groups.set(key,{lat:roundedLat,lon:roundedLon,items:[]});
+        groups.get(key).items.push({p,category,historic});
+      }
+      for(const group of groups.values()){
+        const items=group.items;
+        const deployed=items.some(x=>x.category==='deployed');
+        const maintenance=items.every(x=>x.category==='maintenance');
+        const className=deployed?'deployed':maintenance?'maintenance':'reference';
+        const count=items.length;
+        const icon=L.divIcon({className:'',html:'<div class="carrier-icon '+className+'">'+(count>1?'CVN ×'+count:'CVN')+'</div>',iconSize:[count>1?52:28,18],iconAnchor:[count>1?26:14,9]});
+        const detail=items.map(({p,category,historic})=>{
+          const name=escapeHtml(p.name||p.ship||p.callsign||'Carrier');
+          const hull=p.hull?' · '+escapeHtml(p.hull):'';
+          const region=p.region||p.area?' · '+escapeHtml(p.region||p.area):'';
+          const kind=category==='deployed'?(historic?'LAST REPORTED DEPLOYED (STALE)':'LAST REPORTED DEPLOYED'):category==='maintenance'?'MAINTENANCE':'HOMEPORT / REFERENCE';
+          return '<div style="margin:5px 0"><strong>'+name+hull+'</strong><div>'+escapeHtml(kind)+region+'</div><div>'+escapeHtml(p.status||'')+'</div></div>';
+        }).join('');
+        const heading='<strong>'+count+' carrier'+(count===1?'':'s')+' · approximate public reference</strong>';
+        const footer='<small>Not live positions'+(sourceAgeDays!==null?' · source '+sourceAgeDays+' days old':' · source date unknown')+'</small>';
+        L.marker([group.lat,group.lon],{icon,zIndexOffset:deployed?650:500})
+          .bindTooltip(count>1?count+' carriers · click for details':escapeHtml(items[0].p.name||'Carrier')+' · click for status')
+          .bindPopup(heading+'<div>'+detail+'</div>'+footer,{maxWidth:390})
+          .addTo(state.layers.carriers);
+      }
+      if(d?.warning)console.warn('Carrier source:',d.warning);
     } catch(e) {
-      const st=$('carrier-source-status'); if(st) st.textContent='CARRIERS · ERROR';
+      if(st)st.textContent='CARRIERS · ERROR';
       console.warn('Carrier activity:',e);
     }
   }
