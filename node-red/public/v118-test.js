@@ -71,7 +71,7 @@
    if(r?.error)throw Error(r.error);
    const features=(r.type==='FeatureCollection'?r.features:[]).filter(f=>f?.geometry&&Number.isFinite(Number(f.properties?.muf??f.properties?.MUF??f.properties?.muf_mhz)));
    if(!features.length)throw Error('Source returned no recognized MUF geometries');
-   const map=Object.values(window).find(v=>v&&typeof v.addLayer==='function'&&typeof v.getContainer==='function'&&v.getContainer()?.id==='map');
+   const map=window.shackclockMap;
    if(!map)throw Error('Leaflet map not yet available to add-on');
    mufMap=map;if(mufLayer)map.removeLayer(mufLayer);
    mufLayer=L.geoJSON({type:'FeatureCollection',features},{style:f=>{const n=Number(f.properties.muf??f.properties.MUF??f.properties.muf_mhz);return {color:'#000',weight:.1,fillColor:n>=28?'#fe665e':n>=21?'#feb65b':n>=14?'#e9e86e':n>=7?'#73debb':'#668cf5',fillOpacity:.28}},interactive:false}).addTo(map);
