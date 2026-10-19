@@ -78,7 +78,7 @@
  const KC2G_SOURCE='https://prop.kc2g.com/';
  function mufValue(feature){
   const p=feature?.properties||{};
-  for(const key of ['value','level','muf','MUF','muf_mhz','mufd','MHz','mhz','contour','CONTOUR']){
+  for(const key of ['level-value','value','level','muf','MUF','muf_mhz','mufd','MHz','mhz','contour','CONTOUR']){
    const raw=p[key];if(raw===null||raw===undefined||raw==='')continue;
    const number=Number(raw);if(Number.isFinite(number)&&number>=0&&number<=100)return number;
   }
@@ -91,13 +91,13 @@
   try{
    const r=await get('/api/space/muf');
    if(r?.error)throw Error(r.error);
-   const features=(r?.type==='FeatureCollection'&&Array.isArray(r.features)?r.features:[]).filter(f=>f&&f.geometry);
+   const features=(Array.isArray(r?.features)?r.features:[]).filter(f=>f&&f.geometry);
    if(!features.length)throw Error('KC2G did not return a GeoJSON FeatureCollection');
    const map=window.shackclockMap;if(!map)throw Error('Leaflet map is not ready');
    const styled=features.filter(f=>mufValue(f)!==null);
    if(!styled.length){const fields=Object.keys(features[0]?.properties||{}).join(', ')||'none';throw Error('KC2G MUF value not recognized; fields: '+fields)}
    const layer=L.geoJSON({type:'FeatureCollection',features:styled},{
-    style:f=>{const n=mufValue(f),t=f.geometry?.type||'';return {color:mufColor(n),weight:t.includes('Line')?2:0.6,opacity:0.9,fillColor:mufColor(n),fillOpacity:t.includes('Polygon')?.20:0}},
+    style:f=>{const n=mufValue(f),t=f.geometry?.type||'';return {color:f.properties?.stroke||mufColor(n),weight:t.includes('Line')?2:0.6,opacity:0.9,fillColor:mufColor(n),fillOpacity:t.includes('Polygon')?.20:0}},
     onEachFeature:(f,l)=>{const n=mufValue(f);if(n!==null)l.bindTooltip('KC2G MUF(3000): '+n.toFixed(1)+' MHz')}
    });
    if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);
