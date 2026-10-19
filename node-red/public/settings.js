@@ -112,7 +112,7 @@ function carrierDraftJSON(){
  const source=cw('source').value.trim(),sourceUrl=cw('url').value.trim(),sourceDate=cw('date').value.trim();
  if(!source||!sourceUrl.startsWith('https://'))throw Error('Enter a source name and HTTPS URL for the specific report');
  const d=new Date(sourceDate);
- if(!sourceDate||!/[zZ]|[+-]\\d\\d:\\d\\d$/.test(sourceDate)||!Number.isFinite(d.getTime()))throw Error('Enter a publication time with timezone, e.g. 2026-10-13T15:11:00-04:00');
+ if(!sourceDate||!/(?:[zZ]|[+-]\d{2}:\d{2})$/.test(sourceDate)||!Number.isFinite(d.getTime()))throw Error('Enter a publication time with timezone, e.g. 2026-10-13T15:11:00-04:00');
  if(d.getTime()>Date.now()+86400000)throw Error('Report date cannot be in the future');
  if(!carrierDraft.size)throw Error('Add at least one verified carrier record');
  return {type:'FeatureCollection',source,sourceUrl,sourceDate,features:[...carrierDraft].sort((a,b)=>a[0].localeCompare(b[0])).map(([h,v])=>({
