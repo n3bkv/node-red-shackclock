@@ -1810,7 +1810,7 @@
     "y": 1400,
     "wires": [
       [
-        "v118_muf_out"
+        "v119_muf_metadata"
       ]
     ]
   },
@@ -1824,5 +1824,24 @@
     "x": 800,
     "y": 1400,
     "wires": []
+  },
+  {
+    "id": "v119_muf_metadata",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "KC2G publication time metadata",
+    "func": "const h=msg.headers||{};\nconst modified=h['last-modified']||h['Last-Modified']||null;\nif(msg.payload && typeof msg.payload==='object' && !Array.isArray(msg.payload)){\n msg.payload._shackclock={retrievedAt:new Date().toISOString(),sourceLastModified:modified,source:'KC2G MUF(3000) GeoJSON'};\n}\nmsg.headers={'Content-Type':'application/json','Cache-Control':'no-store'};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 1430,
+    "wires": [
+      [
+        "v118_muf_out"
+      ]
+    ]
   }
 ]
