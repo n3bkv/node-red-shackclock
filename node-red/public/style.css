@@ -53,3 +53,6 @@
 
 /* KC2G MUF legend and map labels */
 #v118-muf-panel[hidden]{display:none!important}#v118-muf-panel{padding:6px 0;border-top:1px solid rgba(255,255,255,.10)}.v118-muf-title{font-size:9px;color:#9ddcf2;font-weight:800;margin:3px 0 5px}.v118-muf-legend{display:flex;flex-wrap:wrap;gap:4px 8px}.v118-muf-key{font-size:9px;display:inline-flex;align-items:center;gap:4px;color:#e4edf3}.v118-muf-swatch{display:inline-block;width:15px;height:3px;border-radius:2px}.v118-muf-label{background:rgba(3,10,17,.82);border:1px solid rgba(255,255,255,.28);border-radius:3px;color:#fff;font-size:11px;font-weight:700;padding:1px 3px;white-space:nowrap;box-shadow:0 0 3px #000}.v118-muf-label-icon{background:transparent;border:0}
+
+/* Public carrier cluster/status display */
+.carrier-icon{white-space:nowrap}.carrier-icon.maintenance{background:rgba(112,123,145,.92);border-color:#b8c1d2}.carrier-icon.reference{opacity:.88}
