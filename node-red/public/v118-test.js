@@ -68,7 +68,7 @@
    const observer={latitude:lat*Math.PI/180,longitude:lon*Math.PI/180,height:0};
    const text=await (await fetch('/api/amateur/tle',{cache:'no-store'})).text();
    const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),sats=[];
-   for(let i=0;i<lines.length-2;i++)if(!lines[i].startsWith('1 ')&&lines[i+1].startsWith('1 ')&&lines[i+2].startsWith('2 ')){try{sats.push({name:lines[i],rec:satellite.twoline2satrec(lines[i+1],lines[i+2])})}catch{}i+=2}
+   for(let i=0;i<lines.length-2;i++)if(!lines[i].startsWith('1 ')&&lines[i+1].startsWith('1 ')&&lines[i+2].startsWith('2 ')){try{const rec=satellite.twoline2satrec(lines[i+1],lines[i+2]);sats.push({name:Number(rec.satnum)===44909?'RS-44':lines[i],rec})}catch{}i+=2}
    const now=Date.now(),step=60000,end=now+24*3600000,results=[];
    for(const sat of sats){
     let prev=look(sat.rec,observer,new Date(now)),start=null,maximum=-90,peakAz=0;
