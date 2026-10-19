@@ -1776,8 +1776,8 @@
     "type": "function",
     "z": "tab_shackclock",
     "name": "Fetch muf",
-    "func": "const key=env.get('IONOFLUX_API_KEY'); if(!key){msg.statusCode=503;msg.payload={error:'Configure IONOFLUX_API_KEY in .env to enable the experimental MUF overlay'};return [null,msg];} msg.url='https://ionoflux.runvia.app/v1/ionosphere/muf?format=geojson';msg.headers={'X-API-Key':key,'Accept':'application/geo+json','User-Agent':'ShackClock/1.1.8-test'};return [msg,null];",
-    "outputs": 2,
+    "func": "msg.url = 'https://prop.kc2g.com/renders/current/mufd-normal-now.geojson';\nmsg.headers = {'Accept':'application/geo+json, application/json','User-Agent':'ShackClock/1.1.8-test (KC2G MUF display)'};\nreturn msg;",
+    "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
@@ -1787,9 +1787,6 @@
     "wires": [
       [
         "v118_muf_http"
-      ],
-      [
-        "v118_muf_out"
       ]
     ]
   },
