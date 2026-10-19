@@ -5,6 +5,11 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
+  // Distances are kilometers internally; only display values follow the chosen setting.
+  const distanceUnit=()=>String(state.config.weatherUnits||'imperial').toLowerCase()==='metric'?'km':'mi';
+  const distanceValue=km=>Number(km)*(distanceUnit()==='mi'?0.621371192237334:1);
+  const displayDistance=(km,digits=0)=>Number.isFinite(Number(km))?distanceValue(km).toLocaleString(undefined,{maximumFractionDigits:digits,minimumFractionDigits:digits}):'--';
+
   const state = {
     config: { call: 'YOURCALL', lat: 0, lon: 0, weatherUnits:'imperial' },
     map: null,
@@ -765,7 +770,7 @@
     state.issUpdated = Number(d.updatedAt) || Date.now();
     state.layers.iss.clearLayers();
     const icon=L.divIcon({className:'',html:'<div class="iss-icon">🛰️</div>',iconSize:[26,26],iconAnchor:[13,13]});
-    L.marker([lat,lon],{icon,zIndexOffset:1000}).bindTooltip(`ISS · ${alt.toFixed(0)} km`).addTo(state.layers.iss);
+    L.marker([lat,lon],{icon,zIndexOffset:1000}).bindTooltip(`ISS · ${displayDistance(alt)} ${distanceUnit()} altitude`).addTo(state.layers.iss);
 
     state.layers.footprint.clearLayers();
     const groundRadiusKm=Number(d.footprintKm);
@@ -782,9 +787,11 @@
       state.issTrackSignature=sig;
     }
 
-    $('iss-alt').textContent=alt.toFixed(0);
+    $('iss-alt').textContent=displayDistance(alt);
+    if($('iss-alt-unit'))$('iss-alt-unit').textContent=distanceUnit();
+    if($('iss-distance-unit'))$('iss-distance-unit').textContent=distanceUnit()+' from QTH';
     $('iss-latlon').textContent=`${lat.toFixed(1)}°, ${lon.toFixed(1)}°`;
-    $('iss-distance').textContent=Number.isFinite(dist) ? Math.round(dist).toLocaleString() : Math.round(haversineKm(state.config.lat,state.config.lon,lat,lon)).toLocaleString();
+    $('iss-distance').textContent=displayDistance(Number.isFinite(dist)?dist:haversineKm(state.config.lat,state.config.lon,lat,lon));
     const fmt=escapeHtml(d.sourceFormat || 'orbit data');
     const age=d.sourceFetchedAt ? ageText(Number(d.sourceFetchedAt)) : 'live';
     setISSStatus(`SERVER PROPAGATION · ${fmt} · ${age}` + (d.warning ? ` · ${d.warning}` : ''));
@@ -1003,7 +1010,7 @@
     pts.sort((a,b)=>a.dist-b.dist);
     for(const s of pts.slice(0,45)) {
       const icon=L.divIcon({className:'',html:'<div class="satellite-icon">🛰</div>',iconSize:[18,18],iconAnchor:[9,9]});
-      L.marker([s.lat,s.lon],{icon,zIndexOffset:540}).bindTooltip(`${escapeHtml(s.name)} · ${s.alt.toFixed(0)} km`).addTo(state.layers.amateurSat);
+      L.marker([s.lat,s.lon],{icon,zIndexOffset:540}).bindTooltip(`${escapeHtml(s.name)} · ${displayDistance(s.alt)} ${distanceUnit()}`).addTo(state.layers.amateurSat);
     }
   }
 
@@ -1033,7 +1040,7 @@
         const when=Number(f?.properties?.time);
         const age=Number.isFinite(when)?ageText(when):'';
         L.circleMarker([lat,lon],{radius,weight:1,color,fillColor:color,fillOpacity:.42,opacity:.95})
-          .bindTooltip(`M${m.toFixed(1)} · ${place}${Number.isFinite(depth)?` · ${depth.toFixed(0)} km deep`:''}${age?` · ${age}`:''}`)
+          .bindTooltip(`M${m.toFixed(1)} · ${place}${Number.isFinite(depth)?` · ${displayDistance(depth)} ${distanceUnit()} deep`:''}${age?` · ${age}`:''}`)
           .addTo(state.layers.earthquakes);
       }
     } catch(e) { console.warn('Earthquakes:',e); }
