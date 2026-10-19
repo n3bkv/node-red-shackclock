@@ -128,7 +128,7 @@ async function carrierDraftAction(mode){
   const data=carrierDraftJSON(),json=JSON.stringify(data,null,2);
   document.getElementById('carrier-data-json').value=json;
   if(mode==='preview'){document.getElementById('carrier-data-json').closest('details').open=true;el.textContent='GeoJSON prepared in Advanced section. Review before importing.';return}
-  if(mode==='download'){const blob=new Blob([json+'\\n'],{type:'application/geo+json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='shackclock-carriers-'+data.sourceDate.slice(0,10)+'.geojson';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);el.textContent='GeoJSON downloaded. Review before sharing or importing.';return}
+  if(mode==='download'){const blob=new Blob([json],{type:'application/geo+json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='shackclock-carriers-'+data.sourceDate.slice(0,10)+'.geojson';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);el.textContent='GeoJSON downloaded. Review before sharing or importing.';return}
   if(!confirm('Import '+data.features.length+' reviewed carrier record(s) from '+data.sourceDate+'? This replaces the current carrier report.'))return;
   const r=await fetch('/api/carriers/import',{method:'POST',headers:{'content-type':'application/json'},body:json});
   const result=await r.json();if(!r.ok||!result.ok)throw Error(result.error||'Import rejected');
