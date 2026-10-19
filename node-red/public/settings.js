@@ -16,7 +16,7 @@ async function load(){
     const d=await r.json();
     for(const [k,v] of Object.entries(d)){const el=form.elements.namedItem(k);if(el)el.value=v??'';}
     showSource(d._meta);
-    for(const name of ['passes','charts','muf']){const el=document.getElementById('v118-setting-'+name);if(el){let p={};try{p=JSON.parse(localStorage.getItem('shackclock.v118.display')||'{}')}catch{}el.value=(p[name]!==undefined?p[name]:name!=='muf')?'on':'off'}}
+    for(const name of ['passes','charts']){const el=document.getElementById('v118-setting-'+name);if(el){let p={};try{p=JSON.parse(localStorage.getItem('shackclock.v118.display')||'{}')}catch{}el.value=(p[name]!==undefined?p[name]:name!=='muf')?'on':'off'}}
     status.textContent='Loaded';
   }catch(e){status.textContent=`Load failed: ${e.message}`;}
 }
@@ -26,7 +26,7 @@ form.addEventListener('submit',async e=>{
   try{
     const r=await fetch('/api/settings-config',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)});
     const out=await r.json();if(!r.ok||!out.ok)throw new Error(out.error||`${r.status}`);
-    const p={};for(const name of ['passes','charts','muf']){const el=document.getElementById('v118-setting-'+name);if(el)p[name]=el.value==='on'}localStorage.setItem('shackclock.v118.display',JSON.stringify(p));
+    let p={};try{p=JSON.parse(localStorage.getItem('shackclock.v118.display')||'{}')}catch{}for(const name of ['passes','charts']){const el=document.getElementById('v118-setting-'+name);if(el)p[name]=el.value==='on'}localStorage.setItem('shackclock.v118.display',JSON.stringify(p));
     status.textContent='Saved in Docker data volume. These values now override matching .env settings.';
     await load();
   }catch(e){status.textContent=`Save failed: ${e.message}`;}
