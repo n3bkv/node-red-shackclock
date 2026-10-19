@@ -87,18 +87,26 @@ function reportDate(url,text){
  return null;
 }
 function extractCarriers(text){
- const paragraphs=String(text).replace(/\r/g,'').split(/\n\s*\n/).flatMap(x=>x.split(/(?<=[.!?])\s+(?=[A-Z])/));
+ const lines=String(text).replace(/\\r/g,'').split(/\\n+/).map(x=>x.trim()).filter(Boolean);
+ const locations=[
+  ['Pacific Ocean',[-150,20]],['Arabian Sea',[64,18]],['Philippine Sea',[135,18]],
+  ['Western Pacific',[145,25]],['Eastern Pacific',[-130,30]],['Indian Ocean',[75,-5]],
+  ['Red Sea',[39,18]],['Mediterranean Sea',[18,35]],['South China Sea',[114,13]],['North Atlantic',[-35,45]]
+ ];
  const found=new Map();
- for(const paragraph of paragraphs){
-  const paragraphLower=paragraph.toLowerCase();
-  if(paragraph.length>1200)continue;
-  const ships=shipNames.map((name,i)=>({hull:'CVN-'+(68+i),name})).filter(x=>paragraphLower.includes(x.name.toLowerCase())||new RegExp('\\b'+x.hull+'\\b','i').test(paragraph));
-  const regions=broadRegions.filter(x=>paragraphLower.includes(x[0].toLowerCase()));
-  if(ships.length!==1||regions.length!==1)continue; // ambiguous claims need human review
-  if(!/deployed|underway|operating|in the|entered|arrived|transit|sailing|patrol|conducting/i.test(paragraph))continue;
-  const ship=ships[0],area=regions[0];
-  if(!found.has(ship.hull))found.set(ship.hull,{...ship,area,quote:paragraph.trim().slice(0,360)});
-  else if(found.get(ship.hull).area[0]!==area[0])found.delete(ship.hull);
+ for(const line of lines){
+  if(line.length>700)continue;
+  const lower=line.toLowerCase().replace(/h\\.\\s*w\\./g,'h.w.');
+  const ships=shipNames.map((name,i)=>({name,i,hull:'CVN-'+(68+i)})).filter(x=>lower.includes(x.name.toLowerCase().replace(/h\\.\\s*w\\./g,'h.w.'))||lower.includes(x.hull.toLowerCase()));
+  if(ships.length!==1)continue;
+  const ship=ships[0];let candidate=null;
+  if(/\\b(returned|returns|arrived|back in)\\b/i.test(line)&&/san diego/i.test(line)){
+   candidate={...ship,area:['San Diego, CA - reference',-117.17,32.69],category:'reference',quote:line.slice(0,360)};
+  }else if(/\\b(transiting|operating|underway|deployed|deployment|sailing|patrolling)\\b/i.test(line)&& !/\\b(homeported|assigned to|replenishment|photo|launches)\\b/i.test(line)){
+   const matches=locations.filter(x=>lower.includes(x[0].toLowerCase()));
+   if(matches.length===1)candidate={...ship,area:[matches[0][0],...matches[0][1]],category:'deployed',quote:line.slice(0,360)};
+  }
+  if(candidate){const prev=found.get(ship.hull);if(!prev||candidate.category==='reference')found.set(ship.hull,candidate)}
  }
  return [...found.values()];
 }
@@ -147,7 +155,7 @@ simple('apply')?.addEventListener('click',async()=>{
   const sourceUrl=simple('url').value.trim(),sourceDate=reportDate(sourceUrl,simple('text').value);
   const data={type:'FeatureCollection',source:'USNI News Fleet Tracker (user reviewed)',sourceUrl,sourceDate,features:selected.map(c=>({
    type:'Feature',geometry:{type:'Point',coordinates:[c.area[1],c.area[2]]},
-   properties:{hull:c.hull,region:c.area[0],category:'deployed',status:'LAST REPORTED IN '+c.area[0]}
+   properties:{hull:c.hull,region:c.area[0],category:c.category,status:c.category==='deployed'?'LAST REPORTED IN '+c.area[0]:'RETURNED TO '+c.area[0]}
   }))};
   if(!confirm('Import '+selected.length+' reviewed approximate carrier region(s) from '+sourceDate.slice(0,10)+'? All other ships will show homeport/reference records.'))return;
   const r=await fetch('/api/carriers/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
