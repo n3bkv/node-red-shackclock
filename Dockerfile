@@ -1,6 +1,6 @@
 FROM nodered/node-red:latest
 
-ARG SHACKCLOCK_VERSION=1.1.6
+ARG SHACKCLOCK_VERSION=1.1.8-test
 LABEL org.opencontainers.image.title="Node-RED ShackClock" \
       org.opencontainers.image.version="${SHACKCLOCK_VERSION}"
 ENV SHACKCLOCK_VERSION="${SHACKCLOCK_VERSION}"
