@@ -70,76 +70,92 @@ document.getElementById('carrier-data-clear')?.addEventListener('click',()=>carr
 document.getElementById('carrier-data-refresh')?.addEventListener('click',carrierRefresh);
 carrierRefresh();
 
-const carrierRegionPoints={
- 'Philippine Sea':[135,18],'Western Pacific':[145,25],'Eastern Pacific':[-130,30],
- 'Arabian Sea':[64,18],'North Atlantic':[-35,45],'Mediterranean Sea':[18,35],
- 'Indian Ocean':[75,-5],'Red Sea':[39,18],'South China Sea':[114,13],
- 'Norfolk, VA - reference':[-76.3,36.95],'San Diego, CA - reference':[-117.17,32.69],
- 'Yokosuka, Japan - reference':[139.67,35.29],
- 'Bremerton, WA - reference':[-122.64,47.56],
- 'Newport News, VA - maintenance':[-76.44,36.99]
-};
-const carrierNames=['Nimitz','Dwight D. Eisenhower','Carl Vinson','Theodore Roosevelt','Abraham Lincoln','George Washington','John C. Stennis','Harry S. Truman','Ronald Reagan','George H. W. Bush','Gerald R. Ford'];
-const carrierDraft=new Map();
-const cw=id=>document.getElementById('carrier-wiz-'+id);
-const hullSelect=cw('hull');
-if(hullSelect)carrierNames.forEach((name,i)=>{
- const opt=document.createElement('option');opt.value='CVN-'+(i+68);opt.textContent='USS '+name+' · '+opt.value;hullSelect.append(opt);
-});
-function carrierDraftRender(){
- const el=cw('list');if(!el)return;el.replaceChildren();
- if(!carrierDraft.size){el.textContent='No carriers added yet.';return}
- const ul=document.createElement('ul');
- for(const [h,v] of [...carrierDraft].sort((a,b)=>a[0].localeCompare(b[0]))){
-  const li=document.createElement('li');
-  li.textContent=h+' · '+v.region+' · '+v.category+' ';
-  const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';
-  remove.addEventListener('click',()=>{carrierDraft.delete(h);carrierDraftRender()});
-  li.append(remove);ul.append(li);
+
+const simple=id=>document.getElementById('carrier-simple-'+id);
+const shipNames=['Nimitz','Dwight D. Eisenhower','Carl Vinson','Theodore Roosevelt','Abraham Lincoln','George Washington','John C. Stennis','Harry S. Truman','Ronald Reagan','George H. W. Bush','Gerald R. Ford'];
+const broadRegions=[
+ ['Philippine Sea',135,18],['Western Pacific',145,25],['Eastern Pacific',-130,30],
+ ['Arabian Sea',64,18],['North Atlantic',-35,45],['Mediterranean Sea',18,35],
+ ['Indian Ocean',75,-5],['Red Sea',39,18],['South China Sea',114,13]
+];
+let simpleCandidates=[];
+function reportDate(url,text){
+ const m=String(url).match(/\/((?:20)\d{2})\/(\d{2})\/(\d{2})\//);
+ if(m){const iso=m[1]+'-'+m[2]+'-'+m[3]+'T12:00:00Z';if(Number.isFinite(Date.parse(iso)))return iso}
+ const d=String(text).match(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+20\d{2}\b/i);
+ if(d){const t=Date.parse(d[0]);if(Number.isFinite(t))return new Date(t).toISOString()}
+ return null;
+}
+function extractCarriers(text){
+ const paragraphs=String(text).replace(/\r/g,'').split(/\n\s*\n/).flatMap(x=>x.split(/(?<=[.!?])\s+(?=[A-Z])/));
+ const found=new Map();
+ for(const paragraph of paragraphs){
+  const paragraphLower=paragraph.toLowerCase();
+  if(paragraph.length>1200)continue;
+  const ships=shipNames.map((name,i)=>({hull:'CVN-'+(68+i),name})).filter(x=>paragraphLower.includes(x.name.toLowerCase())||new RegExp('\\b'+x.hull+'\\b','i').test(paragraph));
+  const regions=broadRegions.filter(x=>paragraphLower.includes(x[0].toLowerCase()));
+  if(ships.length!==1||regions.length!==1)continue; // ambiguous claims need human review
+  if(!/deployed|underway|operating|in the|entered|arrived|transit|sailing|patrol|conducting/i.test(paragraph))continue;
+  const ship=ships[0],area=regions[0];
+  if(!found.has(ship.hull))found.set(ship.hull,{...ship,area,quote:paragraph.trim().slice(0,360)});
+  else if(found.get(ship.hull).area[0]!==area[0])found.delete(ship.hull);
  }
- el.append(ul);
+ return [...found.values()];
 }
-function carrierDraftAdd(){
- const h=cw('hull').value,region=cw('region').value,category=cw('category').value;
- if(!region||!carrierRegionPoints[region])throw Error('Select a region supported by the published report');
- if(category==='reference'&&!region.endsWith(' - reference'))throw Error('Reference records must use a designated homeport reference region');
- if(category==='maintenance'&&!region.endsWith(' - maintenance'))throw Error('Maintenance records must use a designated maintenance reference region');
- if(category==='deployed'&&(region.endsWith(' - reference')||region.endsWith(' - maintenance')))throw Error('Deployed reports must use a broad public operating region');
- carrierDraft.set(h,{region,category,status:cw('status').value.trim().slice(0,120)});
- carrierDraftRender();
+function renderCarrierReview(){
+ const root=simple('results');root.replaceChildren();
+ if(!simpleCandidates.length){simple('review').hidden=true;return}
+ for(const c of simpleCandidates){
+  const row=document.createElement('label');row.style.cssText='display:block;margin:9px 0;padding:8px;border:1px solid #355064;border-radius:5px';
+  const cb=document.createElement('input');cb.type='checkbox';cb.checked=false;cb.dataset.hull=c.hull;cb.style.marginRight='8px';
+  const strong=document.createElement('strong');strong.textContent='USS '+c.name+' ('+c.hull+') — '+c.area[0];
+  const evidence=document.createElement('div');evidence.textContent='Article excerpt: '+c.quote;evidence.style.cssText='font-size:11px;margin:5px 0;opacity:.8';
+  row.append(cb,strong,evidence);root.append(row);
+ }
+ simple('review').hidden=false;
 }
-function carrierDraftJSON(){
- const source=cw('source').value.trim(),sourceUrl=cw('url').value.trim(),sourceDate=cw('date').value.trim();
- if(!source||!sourceUrl.startsWith('https://'))throw Error('Enter a source name and HTTPS URL for the specific report');
- const d=new Date(sourceDate);
- if(!sourceDate||!/(?:[zZ]|[+-]\d{2}:\d{2})$/.test(sourceDate)||!Number.isFinite(d.getTime()))throw Error('Enter a publication time with timezone, e.g. 2026-10-13T15:11:00-04:00');
- if(d.getTime()>Date.now()+86400000)throw Error('Report date cannot be in the future');
- if(!carrierDraft.size)throw Error('Add at least one verified carrier record');
- return {type:'FeatureCollection',source,sourceUrl,sourceDate,features:[...carrierDraft].sort((a,b)=>a[0].localeCompare(b[0])).map(([h,v])=>({
-  type:'Feature',geometry:{type:'Point',coordinates:carrierRegionPoints[v.region]},
-  properties:{hull:h,region:v.region,category:v.category,status:v.status||v.category.toUpperCase()}
- }))};
+function analyzeText(){
+ const text=simple('text').value.trim(),url=simple('url').value.trim();
+ if(!text||text.length<200)throw Error('Paste the report article text (at least 200 characters).');
+ if(!/^https:\/\//.test(url)||!/^https:\/\/news\.usni\.org\//i.test(url))throw Error('Paste the direct USNI Fleet Tracker article URL, not the category page.');
+ const date=reportDate(url,text);
+ if(!date)throw Error('Cannot determine the report date from its URL or article text.');
+ if(Date.parse(date)>Date.now()+86400000)throw Error('Report date is in the future.');
+ simpleCandidates=extractCarriers(text);
+ renderCarrierReview();
+ simple('message').textContent=simpleCandidates.length
+   ?'Found '+simpleCandidates.length+' possible carrier/region match(es). Review the cited excerpts and check only accurate records before importing. Report date: '+date.slice(0,10)
+   :'No unambiguous carrier/region matches found. Nothing was changed; use Advanced GeoJSON for manual import.';
 }
-async function carrierDraftAction(mode){
- const el=cw('message');if(!el)return;
+simple('analyze')?.addEventListener('click',()=>{try{analyzeText()}catch(e){simple('message').textContent=e.message}});
+simple('update')?.addEventListener('click',async()=>{
+ simple('message').textContent='Checking whether the public Fleet Tracker feed is available…';
  try{
-  if(mode==='add'){carrierDraftAdd();el.textContent='Carrier added to draft. Add more or preview the report.';return}
-  if(mode==='reset'){carrierDraft.clear();carrierDraftRender();el.textContent='Draft cleared; saved carrier report unchanged.';return}
-  const data=carrierDraftJSON(),json=JSON.stringify(data,null,2);
-  document.getElementById('carrier-data-json').value=json;
-  if(mode==='preview'){document.getElementById('carrier-data-json').closest('details').open=true;el.textContent='GeoJSON prepared in Advanced section. Review before importing.';return}
-  if(mode==='download'){const blob=new Blob([json],{type:'application/geo+json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='shackclock-carriers-'+data.sourceDate.slice(0,10)+'.geojson';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);el.textContent='GeoJSON downloaded. Review before sharing or importing.';return}
-  if(!confirm('Import '+data.features.length+' reviewed carrier record(s) from '+data.sourceDate+'? This replaces the current carrier report.'))return;
-  const r=await fetch('/api/carriers/import',{method:'POST',headers:{'content-type':'application/json'},body:json});
-  const result=await r.json();if(!r.ok||!result.ok)throw Error(result.error||'Import rejected');
-  el.textContent='Imported '+result.imported+' carrier record(s). Source date: '+result.sourceDate+'. Refresh the map to see updated markers.';
+  const r=await fetch('https://news.usni.org/category/fleet-tracker/feed/',{signal:AbortSignal.timeout(12000)});
+  if(!r.ok)throw Error('HTTP '+r.status);
+  // Feed metadata is useful, but never treat RSS snippets as full deployment reports.
+  simple('message').textContent='Feed reachable, but the full report must be reviewed before updating. Open the latest article, copy its text and link below.';
+ }catch(e){
+  simple('message').textContent='Automatic report access is blocked or unavailable. Open the USNI report link above, copy the latest article text, paste its direct URL and text below, then click Find carriers.';
+ }
+ simple('fallback').hidden=false;
+});
+simple('apply')?.addEventListener('click',async()=>{
+ try{
+  const selected=simpleCandidates.filter(c=>simple('results').querySelector('input[data-hull="'+c.hull+'"]')?.checked);
+  if(!selected.length)throw Error('Select at least one verified carrier.');
+  const sourceUrl=simple('url').value.trim(),sourceDate=reportDate(sourceUrl,simple('text').value);
+  const data={type:'FeatureCollection',source:'USNI News Fleet Tracker (user reviewed)',sourceUrl,sourceDate,features:selected.map(c=>({
+   type:'Feature',geometry:{type:'Point',coordinates:[c.area[1],c.area[2]]},
+   properties:{hull:c.hull,region:c.area[0],category:'deployed',status:'LAST REPORTED IN '+c.area[0]}
+  }))};
+  if(!confirm('Import '+selected.length+' reviewed approximate carrier region(s) from '+sourceDate.slice(0,10)+'? All other ships will show homeport/reference records.'))return;
+  const r=await fetch('/api/carriers/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Import rejected');
+  simple('message').textContent='Carrier data updated: '+d.imported+' reported region(s), source '+d.sourceDate.slice(0,10)+'. Reload the map.';
   await carrierRefresh();
- }catch(e){el.textContent='Cannot '+mode+': '+e.message}
-}
-for(const mode of ['add','preview','download','reset']){
- cw(mode)?.addEventListener('click',()=>carrierDraftAction(mode));
-}
-cw('apply')?.addEventListener('click',()=>carrierDraftAction('apply'));
+ }catch(e){simple('message').textContent='Not imported: '+e.message}
+});
 
 load();
 })();
