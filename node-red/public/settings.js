@@ -42,5 +42,33 @@ document.getElementById('reset').addEventListener('click',async()=>{
     status.textContent='Saved dashboard settings discarded. Using .env / packaged defaults.';
   }catch(e){status.textContent=`Reset failed: ${e.message}`;}
 });
+
+const carrierStatus=document.getElementById('carrier-data-status'),carrierMessage=document.getElementById('carrier-data-message');
+async function carrierRefresh(){
+ if(!carrierStatus)return;
+ try{
+  const r=await fetch('/api/carriers',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);
+  const d=await r.json();
+  const days=d.sourceDate?Math.max(0,Math.floor((Date.now()-Date.parse(d.sourceDate))/86400000)):null;
+  carrierStatus.textContent='Source: '+(d.source||'Unknown')+' | Report: '+(d.sourceDate||'unknown')+(days===null?'':' | '+days+' days old')+' | '+(d.manualImport?'MANUAL IMPORT ACTIVE':'Automatic/fallback')+' | '+(d.counts?.deployed??'?')+' last reported deployed'+(d.warning?' | Warning: '+d.warning:'');
+ }catch(e){carrierStatus.textContent='Carrier source unavailable: '+e.message}
+}
+async function carrierImport(clear=false){
+ if(!carrierMessage)return;
+ if(clear&&!confirm('Clear the manually imported carrier report? This allows the automatic source or historical snapshot to resume on the next carrier refresh.'))return;
+ carrierMessage.textContent=clear?'Clearing imported report…':'Validating and importing…';
+ try{
+  const body=clear?{clear:true}:JSON.parse(document.getElementById('carrier-data-json').value);
+  const r=await fetch('/api/carriers/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Import rejected');
+  carrierMessage.textContent=clear?'Import file cleared. Restart the ShackClock container to resume automatic reports.':'Imported '+d.imported+' carrier record(s) from '+d.sourceDate+'. Reload the dashboard to display the new data.';
+  await carrierRefresh();
+ }catch(e){carrierMessage.textContent='Carrier import failed: '+e.message}
+}
+document.getElementById('carrier-data-import')?.addEventListener('click',()=>carrierImport(false));
+document.getElementById('carrier-data-clear')?.addEventListener('click',()=>carrierImport(true));
+document.getElementById('carrier-data-refresh')?.addEventListener('click',carrierRefresh);
+carrierRefresh();
+
 load();
 })();
