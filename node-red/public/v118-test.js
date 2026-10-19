@@ -91,7 +91,7 @@
  function mufTime(r,features){
    const p=features.find(f=>f?.properties?.time||f?.properties?.timestamp)?.properties||{};
    const candidates=[r?.properties?.timestamp,r?.properties?.time,r?.metadata?.timestamp,r?.metadata?.time,r?.timestamp,r?.time,p.timestamp,p.time];
-   const nice=c=>{const d=new Date(c);return Number.isFinite(d.getTime())?d.toISOString().slice(0,16).replace('T',' ')+' UTC':null};
+   const nice=c=>{if(c===null||c===undefined||c==='')return null;const d=new Date(c);return Number.isFinite(d.getTime())?d.toISOString().slice(0,16).replace('T',' ')+' UTC':null};
    for(const c of candidates){if(!c)continue;const n=nice(c);if(n)return 'KC2G map time: '+n+' (model time)'}
    const modified=nice(r?._shackclock?.sourceLastModified);
    const retrieved=nice(r?._shackclock?.retrievedAt)||nice(Date.now());
