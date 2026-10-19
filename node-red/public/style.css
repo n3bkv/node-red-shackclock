@@ -56,3 +56,5 @@
 
 /* Public carrier cluster/status display */
 .carrier-icon{white-space:nowrap}.carrier-icon.maintenance{background:rgba(112,123,145,.92);border-color:#b8c1d2}.carrier-icon.reference{opacity:.88}
+
+.carrier-icon{width:max-content;min-width:28px;box-sizing:border-box;padding:0 3px}
