@@ -85,25 +85,98 @@
   return null;
  }
  function mufColor(n){return n>=28?'#fe665e':n>=21?'#feb65b':n>=14?'#e9e86e':n>=7?'#73debb':'#668cf5'}
+
+ let mufLabels=null,mufFeatures=[],mufLabelMap=null;
  function mufStatus(message){const e=$('v118-muf-status');if(e)e.textContent=message}
+ function mufTime(r,features){
+   const p=features.find(f=>f?.properties?.time||f?.properties?.timestamp)?.properties||{};
+   const candidates=[r?.properties?.timestamp,r?.properties?.time,r?.metadata?.timestamp,r?.metadata?.time,r?.timestamp,r?.time,p.timestamp,p.time];
+   for(const c of candidates){if(!c)continue;const d=new Date(c);if(Number.isFinite(d.getTime()))return 'KC2G observation: '+d.toISOString().slice(0,16).replace('T',' ')+' UTC'}
+   return 'Retrieved '+new Date().toISOString().slice(0,16).replace('T',' ')+' UTC · source observation time not supplied';
+ }
+ function colorFor(f){return f.properties?.stroke||mufColor(mufValue(f))}
+ function legend(features){
+   const values=new Map();
+   for(const f of features){const n=mufValue(f);if(n!==null&&!values.has(n))values.set(n,colorFor(f))}
+   const el=$('v118-muf-legend');if(!el)return;
+   el.replaceChildren();
+   for(const [n,color] of [...values].sort((a,b)=>a[0]-b[0])){
+     const item=document.createElement('span');item.className='v118-muf-key';
+     const swatch=document.createElement('i');swatch.className='v118-muf-swatch';swatch.style.backgroundColor=color;
+     const label=document.createElement('span');label.textContent=Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
+     item.append(swatch,label);el.append(item);
+   }
+ }
+ function lineParts(geometry){
+   if(!geometry)return [];
+   if(geometry.type==='LineString')return [geometry.coordinates];
+   if(geometry.type==='MultiLineString')return geometry.coordinates;
+   if(geometry.type==='Polygon')return geometry.coordinates.slice(0,1);
+   if(geometry.type==='MultiPolygon')return geometry.coordinates.map(x=>x[0]);
+   return [];
+ }
+ function updateMufLabels(){
+   if(!mufLabelMap||!mufLabels||!mufLabelMap.hasLayer(mufLabels))return;
+   mufLabels.clearLayers();
+   const bounds=mufLabelMap.getBounds(),occupied=[],seenValues=new Map();
+   // One or two labels per MHz contour level in the viewport, with collision avoidance.
+   for(const f of mufFeatures){
+     const n=mufValue(f);if(n===null||seenValues.get(n)>=2)continue;
+     const parts=lineParts(f.geometry).sort((a,b)=>b.length-a.length);
+     let chosen=null,score=-1;
+     for(const coords of parts){
+       if(!Array.isArray(coords)||coords.length<3)continue;
+       const step=Math.max(1,Math.floor(coords.length/30));
+       for(let i=0;i<coords.length;i+=step){
+         const coord=coords[i];if(!Array.isArray(coord)||coord.length<2)continue;
+         const lat=Number(coord[1]),lon=Number(coord[0]);
+         if(!Number.isFinite(lat)||!Number.isFinite(lon)||!bounds.contains([lat,lon]))continue;
+         const pt=mufLabelMap.latLngToContainerPoint([lat,lon]);
+         const w=mufLabelMap.getSize();
+         if(pt.x<25||pt.y<30||pt.x>w.x-25||pt.y>w.y-30)continue;
+         if(occupied.some(o=>Math.hypot(o.x-pt.x,o.y-pt.y)<90))continue;
+         const q=Math.min(pt.x,w.x-pt.x,pt.y,w.y-pt.y);
+         if(q>score){score=q;chosen={lat,lon,pt}}
+       }
+     }
+     if(!chosen)continue;
+     occupied.push(chosen.pt);seenValues.set(n,(seenValues.get(n)||0)+1);
+     const icon=L.divIcon({className:'v118-muf-label-icon',html:'<span class="v118-muf-label">'+Number(n).toLocaleString(undefined,{maximumFractionDigits:1})+' MHz</span>',iconSize:[58,17],iconAnchor:[29,8]});
+     L.marker([chosen.lat,chosen.lon],{icon,interactive:false,keyboard:false,zIndexOffset:250}).addTo(mufLabels);
+     if(occupied.length>=20)break;
+   }
+ }
  async function refreshMuf(){
-  if(!active('muf',false)){if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);return}
-  try{
-   const r=await get('/api/space/muf');
-   if(r?.error)throw Error(r.error);
-   const features=(Array.isArray(r?.features)?r.features:[]).filter(f=>f&&f.geometry);
-   if(!features.length)throw Error('KC2G did not return a GeoJSON FeatureCollection');
-   const map=window.shackclockMap;if(!map)throw Error('Leaflet map is not ready');
-   const styled=features.filter(f=>mufValue(f)!==null);
-   if(!styled.length){const fields=Object.keys(features[0]?.properties||{}).join(', ')||'none';throw Error('KC2G MUF value not recognized; fields: '+fields)}
-   const layer=L.geoJSON({type:'FeatureCollection',features:styled},{
-    style:f=>{const n=mufValue(f),t=f.geometry?.type||'';return {color:f.properties?.stroke||mufColor(n),weight:t.includes('Line')?2:0.6,opacity:0.9,fillColor:mufColor(n),fillOpacity:t.includes('Polygon')?.20:0}},
-    onEachFeature:(f,l)=>{const n=mufValue(f);if(n!==null)l.bindTooltip('KC2G MUF(3000): '+n.toFixed(1)+' MHz')}
-   });
-   if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);
-   mufMap=map;mufLayer=layer;layer.addTo(map);
-   mufStatus('KC2G MUF(3000) · '+styled.length+' contours · ionosonde-derived · prop.kc2g.com');
-  }catch(e){mufStatus('KC2G MUF unavailable: '+e.message);console.warn('KC2G MUF',e)}
+   if(!active('muf',false)){
+     if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);
+     if(mufLabels&&mufMap)mufMap.removeLayer(mufLabels);
+     return;
+   }
+   try{
+     const r=await get('/api/space/muf');
+     if(r?.error)throw Error(r.error);
+     const features=(Array.isArray(r?.features)?r.features:[]).filter(f=>f&&f.geometry);
+     if(!features.length)throw Error('KC2G returned no GeoJSON features');
+     const map=window.shackclockMap;if(!map)throw Error('Leaflet map is not ready');
+     const styled=features.filter(f=>mufValue(f)!==null);
+     if(!styled.length)throw Error('KC2G contour level-value missing');
+     const layer=L.geoJSON({type:'FeatureCollection',features:styled},{
+       style:f=>{const n=mufValue(f),t=f.geometry?.type||'';return {color:colorFor(f),weight:t.includes('Line')?2:0.6,opacity:.9,fillColor:mufColor(n),fillOpacity:t.includes('Polygon')?.20:0}},
+       onEachFeature:(f,l)=>{const n=mufValue(f);if(n!==null)l.bindTooltip('KC2G MUF(3000): '+n.toFixed(1)+' MHz')}
+     });
+     if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);
+     if(mufLabels&&mufMap)mufMap.removeLayer(mufLabels);
+     mufMap=map;mufLayer=layer;mufFeatures=styled;
+     layer.addTo(map);
+     mufLabels=L.layerGroup().addTo(map);
+     if(mufLabelMap!==map){
+       if(mufLabelMap)mufLabelMap.off('moveend zoomend',updateMufLabels);
+       mufLabelMap=map;map.on('moveend zoomend',updateMufLabels);
+     }
+     legend(styled);updateMufLabels();
+     const timeEl=$('v118-muf-time');if(timeEl)timeEl.textContent=mufTime(r,features);
+     mufStatus('KC2G MUF(3000) · '+styled.length+' contours · ionosonde-derived');
+   }catch(e){mufStatus('KC2G MUF unavailable: '+e.message);console.warn('KC2G MUF',e)}
  }
  function syncSettings(){
   for(const name of ['passes','charts','muf']){
