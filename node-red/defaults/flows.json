@@ -1682,5 +1682,150 @@
     "x": 630,
     "y": 900,
     "wires": []
+  },
+  {
+    "id": "v118_xray_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/xray",
+    "url": "/space/xray",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 1340,
+    "wires": [
+      [
+        "v118_xray_url"
+      ]
+    ]
+  },
+  {
+    "id": "v118_xray_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Fetch xray",
+    "func": "msg.url='https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json';msg.headers={'User-Agent':'ShackClock/1.1.8-test'};return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 1340,
+    "wires": [
+      [
+        "v118_xray_http"
+      ]
+    ]
+  },
+  {
+    "id": "v118_xray_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "Upstream xray",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 1340,
+    "wires": [
+      [
+        "v118_xray_out"
+      ]
+    ]
+  },
+  {
+    "id": "v118_xray_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "xray response",
+    "statusCode": "",
+    "headers": {},
+    "x": 800,
+    "y": 1340,
+    "wires": []
+  },
+  {
+    "id": "v118_muf_in",
+    "type": "http in",
+    "z": "tab_shackclock",
+    "name": "GET /space/muf",
+    "url": "/space/muf",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 120,
+    "y": 1400,
+    "wires": [
+      [
+        "v118_muf_url"
+      ]
+    ]
+  },
+  {
+    "id": "v118_muf_url",
+    "type": "function",
+    "z": "tab_shackclock",
+    "name": "Fetch muf",
+    "func": "const key=env.get('IONOFLUX_API_KEY'); if(!key){msg.statusCode=503;msg.payload={error:'Configure IONOFLUX_API_KEY in .env to enable the experimental MUF overlay'};return [null,msg];} msg.url='https://ionoflux.runvia.app/v1/ionosphere/muf?format=geojson';msg.headers={'X-API-Key':key,'Accept':'application/geo+json','User-Agent':'ShackClock/1.1.8-test'};return [msg,null];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 1400,
+    "wires": [
+      [
+        "v118_muf_http"
+      ],
+      [
+        "v118_muf_out"
+      ]
+    ]
+  },
+  {
+    "id": "v118_muf_http",
+    "type": "http request",
+    "z": "tab_shackclock",
+    "name": "Upstream muf",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 1400,
+    "wires": [
+      [
+        "v118_muf_out"
+      ]
+    ]
+  },
+  {
+    "id": "v118_muf_out",
+    "type": "http response",
+    "z": "tab_shackclock",
+    "name": "muf response",
+    "statusCode": "",
+    "headers": {},
+    "x": 800,
+    "y": 1400,
+    "wires": []
   }
 ]
