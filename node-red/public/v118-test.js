@@ -75,19 +75,35 @@
   }catch(e){$('v118-pass-status').textContent='Pass predictions unavailable: '+e.message}
  }
  let mufLayer=null,mufMap=null;
+ const KC2G_SOURCE='https://prop.kc2g.com/';
+ function mufValue(feature){
+  const p=feature?.properties||{};
+  for(const key of ['value','level','muf','MUF','muf_mhz','mufd','MHz','mhz','contour','CONTOUR']){
+   const raw=p[key];if(raw===null||raw===undefined||raw==='')continue;
+   const number=Number(raw);if(Number.isFinite(number)&&number>=0&&number<=100)return number;
+  }
+  return null;
+ }
+ function mufColor(n){return n>=28?'#fe665e':n>=21?'#feb65b':n>=14?'#e9e86e':n>=7?'#73debb':'#668cf5'}
+ function mufStatus(message){const e=$('v118-muf-status');if(e)e.textContent=message}
  async function refreshMuf(){
   if(!active('muf',false)){if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);return}
   try{
    const r=await get('/api/space/muf');
    if(r?.error)throw Error(r.error);
-   const features=(r.type==='FeatureCollection'?r.features:[]).filter(f=>f?.geometry&&Number.isFinite(Number(f.properties?.muf??f.properties?.MUF??f.properties?.muf_mhz)));
-   if(!features.length)throw Error('Source returned no recognized MUF geometries');
-   const map=window.shackclockMap;
-   if(!map)throw Error('Leaflet map not yet available to add-on');
-   mufMap=map;if(mufLayer)map.removeLayer(mufLayer);
-   mufLayer=L.geoJSON({type:'FeatureCollection',features},{style:f=>{const n=Number(f.properties.muf??f.properties.MUF??f.properties.muf_mhz);return {color:'#000',weight:.1,fillColor:n>=28?'#fe665e':n>=21?'#feb65b':n>=14?'#e9e86e':n>=7?'#73debb':'#668cf5',fillOpacity:.28}},interactive:false}).addTo(map);
-   $('v118-muf-status').textContent='MUF · '+features.length+' source grid cells · estimated ionospheric conditions (source dependent)';
-  }catch(e){$('v118-muf-status').textContent='MUF not available: '+e.message}
+   const features=(r?.type==='FeatureCollection'&&Array.isArray(r.features)?r.features:[]).filter(f=>f&&f.geometry);
+   if(!features.length)throw Error('KC2G did not return a GeoJSON FeatureCollection');
+   const map=window.shackclockMap;if(!map)throw Error('Leaflet map is not ready');
+   const styled=features.filter(f=>mufValue(f)!==null);
+   if(!styled.length){const fields=Object.keys(features[0]?.properties||{}).join(', ')||'none';throw Error('KC2G MUF value not recognized; fields: '+fields)}
+   const layer=L.geoJSON({type:'FeatureCollection',features:styled},{
+    style:f=>{const n=mufValue(f),t=f.geometry?.type||'';return {color:mufColor(n),weight:t.includes('Line')?2:0.6,opacity:0.9,fillColor:mufColor(n),fillOpacity:t.includes('Polygon')?.20:0}},
+    onEachFeature:(f,l)=>{const n=mufValue(f);if(n!==null)l.bindTooltip('KC2G MUF(3000): '+n.toFixed(1)+' MHz')}
+   });
+   if(mufLayer&&mufMap)mufMap.removeLayer(mufLayer);
+   mufMap=map;mufLayer=layer;layer.addTo(map);
+   mufStatus('KC2G MUF(3000) · '+styled.length+' contours · ionosonde-derived · prop.kc2g.com');
+  }catch(e){mufStatus('KC2G MUF unavailable: '+e.message);console.warn('KC2G MUF',e)}
  }
  function syncSettings(){
   for(const name of ['passes','charts','muf']){
