@@ -21,16 +21,27 @@
   points.forEach(([t,v])=>{const n=log?Math.log10(Math.max(1e-10,v)):v;if(!Number.isFinite(n))return;const x=(t-t0)/span*(w-1),y=6+(1-(n-min)/(max-min))*(h-18);if(drawn++)ctx.lineTo(x,y);else ctx.moveTo(x,y)});
   ctx.stroke();
  }
+ async function dataset(local,remote){
+  try{return await get(local)}catch(e){console.warn('Local NOAA route failed; trying NOAA directly:',local,e);return await get(remote)}
+ }
  async function charts(){
   if(!active('charts'))return;
+  const messages=[];
   try{
-   const [kp,xray]=await Promise.all([get('/api/space/kp'),get('/api/space/xray')]);
-   const karr=(Array.isArray(kp)?kp:[]).map(x=>[Date.parse(x.time_tag||x.time),Number(x.kp_index??x.kp)]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1])).sort((a,b)=>a[0]-b[0]).slice(-1000);
+   const kp=await dataset('/api/space/kp','https://services.swpc.noaa.gov/json/planetary_k_index_1m.json');
+   const karr=(Array.isArray(kp)?kp:[]).map(x=>[Date.parse(x.time_tag||x.time),Number(x.kp_index??x.kp)]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1])).sort((a,b)=>a[0]-b[0]).slice(-1440);
+   if(!karr.length)throw Error('no numeric Kp samples');
    plot($('v118-kp-canvas'),karr,0,9,'#67d7ff');
+   messages.push('Kp '+karr.length+' samples');
+  }catch(e){messages.push('Kp unavailable: '+e.message)}
+  try{
+   const xray=await dataset('/api/space/xray','https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json');
    const arr=(Array.isArray(xray)?xray:[]).filter(x=>String(x.energy||'').includes('0.1-0.8')).map(x=>[Date.parse(x.time_tag),Number(x.flux)]).filter(x=>Number.isFinite(x[0])&&x[1]>0).sort((a,b)=>a[0]-b[0]);
+   if(!arr.length)throw Error('no long-channel X-ray samples');
    plot($('v118-xray-canvas'),arr,-9,-3,'#ffca66',true);
-   $('v118-chart-status').textContent='NOAA SWPC · Kp '+karr.length+' points · X-ray '+arr.length+' points · UTC';
-  }catch(e){$('v118-chart-status').textContent='NOAA charts unavailable: '+e.message}
+   messages.push('GOES X-ray '+arr.length+' samples');
+  }catch(e){messages.push('X-ray unavailable: '+e.message)}
+  $('v118-chart-status').textContent='NOAA SWPC · '+messages.join(' · ')+' · UTC';
  }
  function look(satrec,observer,date){
   const pv=satellite.propagate(satrec,date);if(!pv.position)return null;
@@ -78,6 +89,26 @@
    $('v118-muf-status').textContent='MUF · '+features.length+' source grid cells · estimated ionospheric conditions (source dependent)';
   }catch(e){$('v118-muf-status').textContent='MUF not available: '+e.message}
  }
+ function syncSettings(){
+  for(const name of ['passes','charts','muf']){
+   const el=$('v118-setting-'+name);
+   if(el)el.value=active(name,name!=='muf')?'on':'off';
+  }
+ }
+ function saveSettings(){
+  for(const name of ['passes','charts','muf']){
+   const el=$('v118-setting-'+name);
+   if(el)prefs[name]=el.value==='on';
+  }
+  try{localStorage.setItem(key,JSON.stringify(prefs))}catch{}
+  for(const name of ['passes','charts','muf']){
+   const cb=$('v118-'+name+'-toggle');
+   if(cb)cb.checked=active(name,name!=='muf');
+   show('v118-'+name+'-panel',active(name,name!=='muf'));
+  }
+  refreshMuf();charts();passes();
+ }
+ window.shackclock118={syncSettings,saveSettings};
  function ready(){
   setup();setTimeout(()=>{charts();passes();refreshMuf()},3000);
   setInterval(charts,5*60000);setInterval(passes,30*60000);setInterval(refreshMuf,15*60000);
