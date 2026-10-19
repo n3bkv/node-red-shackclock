@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: node-red-shackclock:1.1.7
+    image: node-red-shackclock:1.1.8-test
     container_name: shackclock
     restart: unless-stopped
 
@@ -22,6 +22,7 @@ services:
       WEEWX_JSON_URL: ${WEEWX_JSON_URL:-}
       LIGHTNING_GEOJSON_URL: ${LIGHTNING_GEOJSON_URL:-}
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+      IONOFLUX_API_KEY: ${IONOFLUX_API_KEY:-}
       WEATHER_UNITS: ${WEATHER_UNITS:-imperial}
       EARTHQUAKE_MIN_MAG: ${EARTHQUAKE_MIN_MAG:-2.5}
       EARTHQUAKE_MAX_AGE_HOURS: ${EARTHQUAKE_MAX_AGE_HOURS:-24}
