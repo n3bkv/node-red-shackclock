@@ -1,6 +1,25 @@
-# Node-RED ShackClock v1.1.7
+# Node-RED ShackClock v1.1.8
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.8 — MUF, solar history, and satellite passes
+
+This release builds on **v1.1.7 solar imagery** and includes:
+
+- KC2G MUF(3000) contours on the Leaflet map, replicated over wrapped world views.
+- Direct MHz labels, a value-based frequency legend, and source-modification/retrieval timestamps (not mistaken for observation times).
+- A satellite next-pass table using AMSAT active TLEs, with UTC AOS/LOS and maximum elevation.
+- NOAA GOES X-ray and planetary Kp history charts.
+- Persistent browser display controls for MUF, charts, and pass table, including the Settings interfaces.
+- Solar disk HMI and UV 304 Å imagery retained from v1.1.7.
+
+Data sources are third-party and may fail; MUF(3000) is not a station-to-station path prediction. The pass table uses one-minute sampling and is approximate. No KC2G API key is needed.
+
+### Quick start (v1.1.8)
+
+Run `docker compose up -d --build` after copying `.env.example` to `.env` and configuring your station. Existing persistent application settings remain in the Docker data volume.
+
+---
 
 ## v1.1.7
 
