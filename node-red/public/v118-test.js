@@ -9,8 +9,19 @@
  const get=async(url)=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
  function show(id,on){const e=$(id);if(e)e.hidden=!on}
  function setup(){
-  for(const name of ['passes','charts','muf']){const c=$('v118-'+name+'-toggle');if(!c)continue;c.checked=active(name,name!=='muf');c.addEventListener('change',()=>{prefs[name]=c.checked;localStorage.setItem(key,JSON.stringify(prefs));show('v118-'+name+'-panel',c.checked);if(name==='muf')refreshMuf()})}
-  show('v118-passes-panel',active('passes'));show('v118-charts-panel',active('charts'));show('v118-muf-panel',active('muf',false));
+  const c=$('v118-muf-toggle');
+  if(c){
+   c.checked=active('muf',false);
+   c.addEventListener('change',()=>{
+    prefs.muf=c.checked;
+    try{localStorage.setItem(key,JSON.stringify(prefs))}catch{}
+    show('v118-muf-panel',c.checked);
+    refreshMuf();
+   });
+  }
+  show('v118-passes-panel',active('passes'));
+  show('v118-charts-panel',active('charts'));
+  show('v118-muf-panel',active('muf',false));
  }
  function plot(canvas,points,min,max,color,log=false){
   if(!canvas)return;const dpr=window.devicePixelRatio||1,w=Math.max(100,canvas.clientWidth),h=canvas.clientHeight||90;canvas.width=w*dpr;canvas.height=h*dpr;
@@ -213,23 +224,19 @@
    }catch(e){mufStatus('KC2G MUF unavailable: '+e.message);console.warn('KC2G MUF',e)}
  }
  function syncSettings(){
-  for(const name of ['passes','charts','muf']){
+  for(const name of ['passes','charts']){
    const el=$('v118-setting-'+name);
-   if(el)el.value=active(name,name!=='muf')?'on':'off';
+   if(el)el.value=active(name)?'on':'off';
   }
  }
  function saveSettings(){
-  for(const name of ['passes','charts','muf']){
+  for(const name of ['passes','charts']){
    const el=$('v118-setting-'+name);
    if(el)prefs[name]=el.value==='on';
   }
   try{localStorage.setItem(key,JSON.stringify(prefs))}catch{}
-  for(const name of ['passes','charts','muf']){
-   const cb=$('v118-'+name+'-toggle');
-   if(cb)cb.checked=active(name,name!=='muf');
-   show('v118-'+name+'-panel',active(name,name!=='muf'));
-  }
-  refreshMuf();charts();passes();
+  for(const name of ['passes','charts'])show('v118-'+name+'-panel',active(name));
+  charts();passes();
  }
  window.shackclock118={syncSettings,saveSettings};
  function ready(){
