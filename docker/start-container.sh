@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-VERSION="1.1.8-test"
+VERSION="1.1.8-test-kc2g"
 MARKER="/data/.shackclock-version"
 CURRENT=""
 echo "[ShackClock] Node-RED ShackClock v$VERSION"
