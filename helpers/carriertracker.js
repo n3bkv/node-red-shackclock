@@ -3,6 +3,7 @@
 
 const fs=require('fs');
 const CACHE='/data/carrier-cache.json';
+const IMPORT='/data/carrier-import.json';
 const SETTINGS='/data/shackclock-settings.json';
 const ARCHIVE='https://news.usni.org/category/fleet-tracker';
 const RSS='https://news.usni.org/category/fleet-tracker/feed/';
@@ -94,7 +95,8 @@ function write(x){fs.writeFileSync(CACHE,JSON.stringify(x,null,2)+'\n');}
 async function poll(){
   const {V}=readSettings(); const enabled=String(V('CARRIER_ENABLED','true'))!=='false';
   const hours=Math.max(1,Math.min(168,Number(V('CARRIER_REFRESH_HOURS',6))||6));
-  if(!enabled){write({type:'FeatureCollection',features:[],source:'disabled',updatedAt:Date.now(),disabled:true});return hours;}
+  if(!enabled){return hours;}
+  try{const imported=JSON.parse(fs.readFileSync(IMPORT,'utf8'));if(imported.manualImport&&imported.features?.length===11){write(imported);console.log('[CARRIER] using imported public report '+imported.sourceDate);return hours;}}catch(e){if(e.code!=='ENOENT')console.warn('[CARRIER] manual report:',e.message)}
   const custom=String(V('CARRIER_GEOJSON_URL','')).trim();
   try{
     let out;
@@ -116,6 +118,13 @@ async function poll(){
         if(parsed?.features?.length) out=mergeFleet(parsed.features,{source:'USNI live deployment regions + public fleet reference',sourceUrl:parsed.sourceUrl,sourceDate:parsed.sourceDate});
         else out=bundled('no carrier regions parsed from live Fleet Tracker');
       }
+    }
+    const previous=readOld();
+    const previousDate=Date.parse(previous?.sourceDate||'');
+    const incomingDate=Date.parse(out?.sourceDate||'');
+    if(previous?.manualImport || (previous?.features?.length && Number.isFinite(previousDate) && (!Number.isFinite(incomingDate)||incomingDate<previousDate))){
+      out=previous;
+      if(!out.manualImport)out.warning='Source fetch unavailable or older than cached report; preserving latest cached data.';
     }
     write(out); console.log(`[CARRIER] ${out.source}: ${out.features.length} fleet markers${out.counts?` (${out.counts.deployed} deployed)`:''}${out.warning?' (fallback)':''}`);
   }catch(e){
