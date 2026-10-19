@@ -2,19 +2,32 @@
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
 
-## Public carrier reports: persistent manual import (v1.1.8)
+## Updating public carrier reports (v1.1.8)
 
-USNI may return Cloudflare 403 challenges to automated RSS/archive requests. ShackClock keeps its existing read-only automated attempts, but **Settings → Carrier Data** accepts a manually reviewed public GeoJSON report. A successful import updates the map immediately and is saved under `/data/carrier-import.json` in the persistent Docker volume. The carrier helper prefers that import on every poll and will not overwrite it with the bundled September 21 snapshot. A newer cached report is also protected from older automatic results.
+ShackClock displays **dated, approximate public carrier reports**, not live ship tracking. USNI News may block automatic access with a Cloudflare challenge, so the simplest reliable method is to paste the latest article into ShackClock and review its suggestions.
 
-A report includes `type: "FeatureCollection"`, `source`, `sourceUrl` (HTTPS), ISO 8601 `sourceDate`, and 1–11 carrier Point features. Each feature requires `properties.hull` (CVN-68 through CVN-78), `properties.region` (public *approximate* area), and `properties.category` (`deployed`, `reference`, or `maintenance`). Unspecified fleet members revert to static homeport/maintenance **references**, not historical deployed coordinates. Only import observations supported by the original public report.
+### Step-by-step: copy a USNI report into ShackClock
 
-Example of one reported carrier (illustrative **only**, not real deployment data):
+1. Open **[USNI News — Fleet Tracker](https://news.usni.org/category/fleet-tracker)** in a normal browser.
+2. Click the **most recent "USNI News Fleet and Marine Tracker" article** (not the category/archive page). Note the article's publication date.
+3. Copy the **URL from the address bar** for that specific article.
+4. On the article page, select and copy the **article text**, beginning with the introduction and including the geographic sections about carrier movements. **Stop before the reader comments**; do not include the comments, related stories, or page navigation. You may omit photo captions and long aircraft/squadron rosters.
+5. Open ShackClock → **Settings → Carrier Data · Public Reports**.
+6. Click **Update Carrier Data**. If automatic access is blocked, this is expected; use the paste-text area beneath the button.
+7. Paste the **specific article URL** into **Report link** and the copied article into **Paste report text**.
+8. Click **Find carriers in pasted report**.
+9. In **Review proposed updates**, read the suggested carrier names, reported regions, and supporting excerpts. **Check the box beside each correctly matched ship**. Leave uncertain or inaccurate matches unchecked. Some ships may not be found automatically.
+10. Click **Import reviewed updates** and confirm. Then return to the map, turn on **LAYERS → CARRIERS**, and refresh the dashboard.
 
-```json
-{"type":"FeatureCollection","source":"Reviewed public report","sourceUrl":"https://example.org/report","sourceDate":"2026-10-18T12:00:00Z","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-125,35]},"properties":{"hull":"CVN-68","region":"Example general ocean region","category":"reference"}}]}
-```
+**Important:** The imported report replaces the current deployment snapshot. Ships not selected revert to static homeport/maintenance reference markers; this does **not** mean they have been independently confirmed in port. The map displays *representative points for broad geographic regions*, not actual ship coordinates. Always check the original article and its date.
 
-Check `GET /api/carriers` for the current `sourceDate`, source URL, `manualImport`, and counts. Settings has a **Clear imported report** control; after clearing, restart ShackClock to resume automatic retrieval/fallback. The import POST endpoint is administrative: do not expose it on a public network without an authentication layer.
+### If the article parser misses a carrier
+
+Try pasting the complete article body, including the short movement statements under each geographical heading (but not reader comments). The parser is intentionally conservative and may miss ambiguous wording; it will not automatically create a deployment record without a recognizable region. To add a supported record manually, expand **Advanced: paste or edit GeoJSON directly**, paste a validated GeoJSON FeatureCollection, and click **Validate & import report**.
+
+Advanced format: the JSON must include `type: "FeatureCollection"`, `source`, a specific HTTPS `sourceUrl`, ISO-8601 `sourceDate`, and 1–11 Point features. Each feature requires `properties.hull` (CVN-68 through CVN-78), `properties.region`, and `properties.category` (`deployed`, `reference`, or `maintenance`). Longitude comes **before** latitude.
+
+Reports are stored in the Docker volume at `/data/carrier-import.json` and survive rebuilds. The last accepted imported report remains authoritative until cleared. The **Clear imported report** control removes the import; restart the container to resume automated retrieval and fallback. The `POST /api/carriers/import` endpoint is administrative and **must not be exposed publicly without authentication**.
 
 ---
 
@@ -24,7 +37,7 @@ This release builds on **v1.1.7 solar imagery** and includes:
 
 - KC2G MUF(3000) contours on the Leaflet map, replicated over wrapped world views.
 - Direct MHz labels, a value-based frequency legend, and source-modification/retrieval timestamps (not mistaken for observation times).
-- A satellite next-pass table using AMSAT active TLEs, with UTC AOS/LOS and maximum elevation.
+- A satellite next-pass table using AMSAT active TLEs, with UTC AOS/LOS and maximum elevation. NORAD 44909 is labeled RS-44 in the pass table and amateur-satellite map.
 - NOAA GOES X-ray and planetary Kp history charts.
 - Persistent browser display controls for MUF, charts, and pass table, including the Settings interfaces.
 - Solar disk HMI and UV 304 Å imagery retained from v1.1.7.
