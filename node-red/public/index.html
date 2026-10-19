@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-  <title>ShackClock v1.1.7</title>
+  <title>ShackClock v1.1.8 TEST</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/style.css?v=1.1.6" />
+  <link rel="stylesheet" href="/style.css?v=1.1.8-test" />
 </head>
 <body>
   <div id="map"></div>
@@ -52,6 +52,15 @@
       <div class="solar-source" id="solar-status" role="status">Loading solar imagery…</div>
     </section>
 
+    <section class="glass v118-panel" id="v118-charts-panel">
+      <div class="eyebrow">SOLAR TRENDS · NOAA SWPC</div>
+      <div class="v118-mini-title">GOES X-RAY · 0.1–0.8 NM · LOG W/M²</div>
+      <canvas id="v118-xray-canvas" height="75"></canvas>
+      <div class="v118-mini-title">PLANETARY Kp · LAST 24H</div>
+      <canvas id="v118-kp-canvas" height="75"></canvas>
+      <div class="v118-status" id="v118-chart-status">Loading NOAA history…</div>
+    </section>
+
     <section class="glass ham-panel">
       <div class="eyebrow">HAM ACTIVITY</div>
       <div class="ham-stats">
@@ -87,9 +96,18 @@
       <div id="forecast" class="forecast-grid"><div class="muted">Loading…</div></div>
     </section>
 
+    <section class="glass v118-panel" id="v118-passes-panel">
+      <div class="eyebrow">NEXT AMATEUR SATELLITE PASSES</div>
+      <table class="v118-table"><thead><tr><th>SATELLITE</th><th>AOS</th><th>LOS</th><th>MAX EL</th></tr></thead><tbody id="v118-passes-body"><tr><td colspan="4">Calculating…</td></tr></tbody></table>
+      <div class="v118-status" id="v118-pass-status">Loading active AMSAT orbital data…</div>
+    </section>
+
     <section class="glass layer-panel">
       <div class="eyebrow layer-title-row"><span>LAYERS</span><button class="settings-link" id="open-settings" type="button">SETTINGS</button></div>
       <div class="layer-grid">
+        <label><input type="checkbox" id="v118-muf-toggle"> MUF MAP</label>
+        <label><input type="checkbox" id="v118-passes-toggle" checked> SAT PASSES</label>
+        <label><input type="checkbox" id="v118-charts-toggle" checked> SOLAR CHARTS</label>
         <label><input type="checkbox" data-layer="radar" checked> RADAR</label>
         <label><input type="checkbox" data-layer="clouds" checked> CLOUDS</label>
         <label><input type="checkbox" data-layer="lightning" checked> LIGHTNING</label>
@@ -112,6 +130,7 @@
         <div><span>CLOUD OPACITY</span><b id="cloud-opacity-value">48%</b></div>
         <input id="cloud-opacity" type="range" min="0" max="100" step="5" value="48" aria-label="Cloud opacity">
       </div>
+      <div class="v118-status" id="v118-muf-panel" hidden><span id="v118-muf-status">MUF source not enabled</span></div>
       <div class="layer-source-status"><span id="air-source-status">AIR · --</span><span id="carrier-source-status">CARRIERS · --</span></div>
       <div class="base-map-note">BASE MAP · ESRI WORLD IMAGERY · ALWAYS ON</div>
       <div class="layer-actions">
@@ -288,6 +307,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/@joergdietrich/leaflet.terminator@1.3.0/L.Terminator.js"></script>
   <script src="/vendor/satellite.min.js?v=6.0.2"></script>
-  <script src="/app.js?v=1.1.6"></script>
+  <script src="/app.js?v=1.1.8-test"></script>
+  <script src="/v118-test.js?v=1.1.8-test"></script>
 </body>
 </html>
