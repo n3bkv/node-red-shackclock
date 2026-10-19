@@ -985,7 +985,7 @@
   function parseTleSet(text) {
     const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), out=[];
     for(let i=0;i<lines.length-2;i++) if(!/^1 /.test(lines[i]) && /^1 /.test(lines[i+1]) && /^2 /.test(lines[i+2])) {
-      try { out.push({name:lines[i],satrec:satellite.twoline2satrec(lines[i+1],lines[i+2])}); } catch(_){} i+=2;
+      try { const satrec=satellite.twoline2satrec(lines[i+1],lines[i+2]); out.push({name:Number(satrec.satnum)===44909?'RS-44':lines[i],satrec}); } catch(_){} i+=2;
     }
     return out;
   }
