@@ -1255,6 +1255,7 @@
         if (el) el.value = d[key] ?? '';
       }
       if ($('solar-mode-setting')) $('solar-mode-setting').value = readSolarMode();
+      window.shackclock118?.syncSettings();
       const source = $('ui-settings-source');
       if (source) {
         const savedCount = Number(d?._meta?.savedCount || 0);
@@ -1289,6 +1290,7 @@
       if (!r.ok || !out.ok) throw new Error(out.error || `${r.status}`);
       const selectedSolarMode = $('solar-mode-setting')?.value || 'sunspots';
       try { localStorage.setItem(SOLAR_MODE_KEY, selectedSolarMode); } catch (_) {}
+      window.shackclock118?.saveSettings();
       status.textContent = 'Saved. Applying…';
       setTimeout(() => location.reload(), 450);
     } catch (e) {
