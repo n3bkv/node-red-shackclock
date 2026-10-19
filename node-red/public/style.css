@@ -47,3 +47,6 @@
 .solar-source{color:#8fa0ad;font-size:9px;text-align:center;margin-top:6px}
 .solar-source.error{color:#ff8888}
 @media(max-height:850px){.solar-frame img{max-height:clamp(100px,23vh,220px)}}
+
+/* Experimental v1.1.8 display panels */
+.v118-panel{padding:9px 12px}.v118-panel[hidden]{display:none!important}.v118-panel canvas{width:100%;height:75px;display:block;margin:3px 0 7px}.v118-mini-title{font-size:9px;color:#b6cbd7;margin-top:8px}.v118-status{font-size:9px;color:#a8b2bc;margin-top:7px;line-height:1.35;overflow-wrap:anywhere}.v118-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}.v118-table th{text-align:left;color:#8fc9df;font-size:9px}.v118-table td{padding:3px 3px 3px 0;border-bottom:1px solid rgba(255,255,255,.07)}.v118-table th:first-child,.v118-table td:first-child{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
