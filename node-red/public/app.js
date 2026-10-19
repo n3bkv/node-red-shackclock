@@ -122,6 +122,7 @@
       preferCanvas: true
     }).setView([state.config.lat, state.config.lon], 5);
     state.map = map;
+    window.shackclockMap = map;
 
     state.layers.imagery = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
