@@ -1352,10 +1352,10 @@
     const dialog = $('settings-dialog');
     const form = $('ui-settings-form');
     if (!dialog || !form) return;
-    $('open-settings').addEventListener('click', async () => {
-      await loadUiSettings();
-      if (typeof dialog.showModal === 'function') dialog.showModal();
-      else dialog.setAttribute('open','');
+    // Keep a single Settings experience: the standalone page includes newer
+    // carrier import/wizard functionality absent from the legacy dialog.
+    $('open-settings').addEventListener('click', () => {
+      window.location.assign('/settings.html');
     });
     $('close-settings').addEventListener('click', () => dialog.close ? dialog.close() : dialog.removeAttribute('open'));
     $('reload-ui-settings').addEventListener('click', loadUiSettings);
