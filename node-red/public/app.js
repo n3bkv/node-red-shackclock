@@ -557,7 +557,7 @@
 
   // RainViewer permits 100 requests/IP/minute (2026). One static frame keeps
   // world-view tile loads below the six-frame animation's request burst.
-  // This is a conservative radar test mode: animation is intentionally off.
+  // Static mode is the default; optional two-frame animation is restricted to local zoom.
   let radarLastUpdate = 0;
   let radarErrorCount = 0;
   let radarCooldownUntil = 0;
@@ -611,8 +611,10 @@
         radarAnimationTimer = setInterval(() => {
           if (!radarCanAnimate()) { stopRadarAnimation(); return; }
           radarAnimationVisible = !radarAnimationVisible;
+          // Keep the confirmed working current radar frame visible at all times.
+          // Only fade the older overlay; never hide both frames during a transition.
+          state.radarCurrentLayer.setOpacity(0.72);
           layer.setOpacity(radarAnimationVisible ? 0.72 : 0);
-          state.radarCurrentLayer.setOpacity(radarAnimationVisible ? 0 : 0.72);
         }, 2400);
       });
       layer.addTo(state.layers.radar);
