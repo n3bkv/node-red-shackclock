@@ -1,4 +1,4 @@
-/* Node-RED ShackClock v1.1.8
+/* Node-RED ShackClock v1.1.9
  * Full-screen Leaflet client. Node-RED serves/proxies the data APIs.
  */
 (() => {
@@ -258,7 +258,10 @@
       if (cb.checked && !cb.disabled) {
         if (!state.map.hasLayer(layer)) layer.addTo(state.map);
         if (name === 'radar') drawRadarFrame();
-      } else if (state.map.hasLayer(layer)) state.map.removeLayer(layer);
+      } else if (state.map.hasLayer(layer)) {
+        if (name === 'radar') stopRadarAnimation();
+        state.map.removeLayer(layer);
+      }
     }
 
     document.querySelectorAll('[data-layer]').forEach(cb => {
@@ -270,6 +273,16 @@
     });
     saveLayerState();
     state.map.on('movestart zoomstart', beginRadarViewChange);
+    state.map.on('moveend zoomend', scheduleRadarAnimation);
+    const mode = $('radar-mode');
+    if (mode) {
+      mode.value = radarAnimationEnabled() ? 'animated' : 'static';
+      mode.addEventListener('change', () => {
+        localStorage.setItem('shackclock.radarMode', mode.value);
+        stopRadarAnimation();
+        scheduleRadarAnimation();
+      });
+    }
     $('view-local').onclick = () => state.map.setView([state.config.lat, state.config.lon], 7);
     $('view-usa').onclick = () => state.map.setView([38.5, -98.5], 4);
     $('view-world').onclick = () => state.map.setView([20, -20], 2);
@@ -549,6 +562,64 @@
   let radarErrorCount = 0;
   let radarCooldownUntil = 0;
 
+  let radarAnimationLayer = null;
+  let radarAnimationTimer = null;
+  let radarAnimationDelay = null;
+  let radarAnimationVisible = false;
+  let radarPreviousFrame = null;
+  const radarAnimationEnabled = () => localStorage.getItem('shackclock.radarMode') === 'animated';
+  const radarCanAnimate = () => radarAnimationEnabled() && state.map?.getZoom() >= 6 &&
+    state.map.hasLayer(state.layers.radar) && Date.now() >= radarCooldownUntil;
+
+  function stopRadarAnimation() {
+    clearInterval(radarAnimationTimer);
+    clearTimeout(radarAnimationDelay);
+    radarAnimationTimer = null;
+    radarAnimationDelay = null;
+    radarAnimationVisible = false;
+    if (radarAnimationLayer && state.layers.radar.hasLayer(radarAnimationLayer)) {
+      state.layers.radar.removeLayer(radarAnimationLayer);
+    }
+    radarAnimationLayer = null;
+    state.radarCurrentLayer?.setOpacity(0.72);
+  }
+
+  function scheduleRadarAnimation() {
+    clearTimeout(radarAnimationDelay);
+    if (!radarCanAnimate() || !radarPreviousFrame || !state.radarCurrentLayer || radarAnimationLayer) return;
+    radarAnimationDelay = setTimeout(() => {
+      radarAnimationDelay = null;
+      if (!radarCanAnimate() || radarAnimationLayer || !radarPreviousFrame) return;
+      const f = radarPreviousFrame;
+      const url = `${f.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`;
+      const layer = L.tileLayer(url, {
+        opacity: 0, maxZoom: 7, maxNativeZoom: 7, zIndex: 300,
+        updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 1,
+        className: 'radar-frame'
+      });
+      radarAnimationLayer = layer;
+      let failures = 0;
+      layer.on('tileerror', () => {
+        if (++failures >= 5) {
+          radarCooldownUntil = Date.now() + 15 * 60 * 1000;
+          console.warn('Radar animation paused after tile failures (possible HTTP 429).');
+          stopRadarAnimation();
+        }
+      });
+      layer.once('load', () => {
+        if (radarAnimationLayer !== layer || !radarCanAnimate() || failures >= 5) return;
+        radarAnimationTimer = setInterval(() => {
+          if (!radarCanAnimate()) { stopRadarAnimation(); return; }
+          radarAnimationVisible = !radarAnimationVisible;
+          layer.setOpacity(radarAnimationVisible ? 0.72 : 0);
+          state.radarCurrentLayer.setOpacity(radarAnimationVisible ? 0 : 0.72);
+        }, 2400);
+      });
+      layer.addTo(state.layers.radar);
+    }, 90000);
+  }
+
+
   async function refreshRadar() {
     if (!state.map || !state.map.hasLayer(state.layers.radar)) return;
     const now = Date.now();
@@ -558,10 +629,14 @@
       const past = d?.radar?.past || [];
       if (!past.length || !d.host) throw new Error('No radar frames');
       const newest = { host: d.host, ...past[past.length - 1] };
+      const previous = past.length > 1 ? { host: d.host, ...past[past.length - 2] } : null;
       if (state.radarFrames[0]?.path === newest.path && state.radarCurrentLayer) {
+        radarPreviousFrame = previous;
         radarLastUpdate = now;
+        scheduleRadarAnimation();
         return;
       }
+      stopRadarAnimation();
       const url = `${newest.host}${newest.path}/256/{z}/{x}/{y}/2/1_1.png`;
       if (!state.radarCurrentLayer) {
         const layer = L.tileLayer(url, {
@@ -589,12 +664,14 @@
       } else {
         state.radarCurrentLayer.setUrl(url);
       }
+      radarPreviousFrame = previous;
       state.radarFrames = [newest];
       state.radarLayers = [state.radarCurrentLayer];
       state.radarReady = [true];
       state.radarIndex = 0;
       radarLastUpdate = now;
       clearTimeout(state.radarTimer);
+      scheduleRadarAnimation();
     } catch (e) {
       radarCooldownUntil = Date.now() + 5 * 60 * 1000;
       console.warn('Radar:', e);
@@ -602,13 +679,14 @@
   }
 
   function beginRadarViewChange() {
-    // Static single-frame radar needs no animation reset.
+    stopRadarAnimation();
   }
 
   function drawRadarFrame() {
     // Restore radar after toggling the layer on.
     if (state.radarCurrentLayer) state.radarCurrentLayer.setOpacity(0.72);
     refreshRadar();
+    scheduleRadarAnimation();
   }
 
   async function refreshLightning() {
