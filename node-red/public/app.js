@@ -568,7 +568,7 @@
   let radarAnimationVisible = false;
   let radarPreviousFrame = null;
   const radarAnimationEnabled = () => localStorage.getItem('shackclock.radarMode') === 'animated';
-  const radarCanAnimate = () => radarAnimationEnabled() && state.map?.getZoom() >= 6 &&
+  const radarCanAnimate = () => radarAnimationEnabled() && state.map?.getZoom() >= 5 &&
     state.map.hasLayer(state.layers.radar) && Date.now() >= radarCooldownUntil;
 
   function stopRadarAnimation() {
