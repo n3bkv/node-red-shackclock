@@ -542,179 +542,73 @@
     return kp <= 3 ? 'FAIR' : 'VARIABLE';
   }
 
+  // RainViewer permits 100 requests/IP/minute (2026). One static frame keeps
+  // world-view tile loads below the six-frame animation's request burst.
+  // This is a conservative radar test mode: animation is intentionally off.
+  let radarLastUpdate = 0;
+  let radarErrorCount = 0;
+  let radarCooldownUntil = 0;
+
   async function refreshRadar() {
+    if (!state.map || !state.map.hasLayer(state.layers.radar)) return;
+    const now = Date.now();
+    if (now < radarCooldownUntil || now - radarLastUpdate < 15 * 60 * 1000) return;
     try {
       const d = await getJSON('/api/radar');
       const past = d?.radar?.past || [];
       if (!past.length || !d.host) throw new Error('No radar frames');
-      const frames = past.slice(-6).map(f => ({ host:d.host, ...f }));
-      const newKey = frames.map(f => f.path).join('|');
-      const oldKey = state.radarFrames.map(f => f.path).join('|');
-      if (newKey === oldKey && state.radarLayers.length) return;
-      await prepareRadarFrames(frames);
+      const newest = { host: d.host, ...past[past.length - 1] };
+      if (state.radarFrames[0]?.path === newest.path && state.radarCurrentLayer) {
+        radarLastUpdate = now;
+        return;
+      }
+      const url = `${newest.host}${newest.path}/256/{z}/{x}/{y}/2/1_1.png`;
+      if (!state.radarCurrentLayer) {
+        const layer = L.tileLayer(url, {
+          opacity: 0.72,
+          maxZoom: 7,
+          maxNativeZoom: 7,
+          zIndex: 300,
+          updateWhenIdle: true,
+          updateWhenZooming: false,
+          keepBuffer: 1,
+          className: 'radar-frame'
+        });
+        layer.on('tileerror', () => {
+          radarErrorCount++;
+          // Leaflet tileerror doesn't expose HTTP status consistently. After
+          // repeated failures, pause updates instead of retrying aggressively.
+          if (radarErrorCount >= 5) {
+            radarCooldownUntil = Date.now() + 15 * 60 * 1000;
+            console.warn('Radar tile failures; cooling down for 15 minutes (check Network for HTTP 429).');
+          }
+        });
+        layer.on('tileload', () => { radarErrorCount = 0; });
+        state.radarCurrentLayer = layer;
+        layer.addTo(state.layers.radar);
+      } else {
+        state.radarCurrentLayer.setUrl(url);
+      }
+      state.radarFrames = [newest];
+      state.radarLayers = [state.radarCurrentLayer];
+      state.radarReady = [true];
+      state.radarIndex = 0;
+      radarLastUpdate = now;
+      clearTimeout(state.radarTimer);
     } catch (e) {
+      radarCooldownUntil = Date.now() + 5 * 60 * 1000;
       console.warn('Radar:', e);
     }
   }
 
-  function waitForLayerLoad(layer, timeoutMs = 7000) {
-    return new Promise(resolve => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        resolve(ok);
-      };
-      layer.once('load', () => finish(true));
-      // tileerror may still leave most visible tiles loaded, so let the normal
-      // load event or timeout decide rather than treating one missing tile as fatal.
-      const timer = setTimeout(() => finish(false), timeoutMs);
-    });
-  }
-
-  async function prepareRadarFrames(frames) {
-    const generation = ++state.radarGeneration;
-    const newLayers = [];
-    const ready = new Array(frames.length).fill(false);
-    const loadPromises = [];
-
-    // Preload every animation frame while the currently-visible radar frame
-    // remains untouched. Animation later switches only between loaded layers,
-    // eliminating the clear/recreate flash seen in earlier versions.
-    frames.forEach((f, i) => {
-      const url = `${f.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`;
-      const layer = L.tileLayer(url, {
-        opacity: 0,
-        maxZoom: 7,
-        maxNativeZoom: 7,
-        zIndex: 300,
-        updateWhenIdle: false,
-        updateWhenZooming: false,
-        keepBuffer: 6,
-        className: 'radar-frame'
-      });
-      newLayers.push(layer);
-      layer.addTo(state.layers.radar);
-      loadPromises.push(waitForLayerLoad(layer).then(ok => { ready[i] = ok; return ok; }));
-    });
-
-    // Start as soon as the first frame is actually ready; do not wait for a
-    // slow tile in every frame. Give the preload a short head start first.
-    await Promise.race([
-      Promise.all(loadPromises),
-      new Promise(resolve => setTimeout(resolve, 2200))
-    ]);
-    if (generation !== state.radarGeneration) {
-      newLayers.forEach(l => state.layers.radar.removeLayer(l));
-      return;
-    }
-
-    // If the first frame has not loaded, choose the first loaded frame. If none
-    // have loaded yet, wait for the complete preload/fallback timers to finish.
-    if (!ready.some(Boolean)) await Promise.all(loadPromises);
-    if (generation !== state.radarGeneration) return;
-    let firstReady = ready.findIndex(Boolean);
-    if (firstReady < 0) {
-      newLayers.forEach(l => state.layers.radar.removeLayer(l));
-      console.warn('Radar frames did not preload');
-      return;
-    }
-
-    const oldLayers = state.radarLayers.slice();
-    const oldCurrent = state.radarCurrentLayer;
-    state.radarFrames = frames;
-    state.radarLayers = newLayers;
-    state.radarReady = ready;
-    state.radarIndex = firstReady;
-    state.radarCurrentLayer = newLayers[firstReady];
-    state.radarCurrentLayer.setOpacity(0.72);
-
-    // Track tile readiness again after every map move/zoom. The initial ready[]
-    // state above applies only to the viewport used during preload.
-    newLayers.forEach(layer => {
-      layer.on('load', () => radarLayerLoaded(layer));
-    });
-
-    // Cross-fade off the old frame only after the replacement is visible.
-    if (oldCurrent && oldCurrent !== state.radarCurrentLayer) oldCurrent.setOpacity(0);
-    setTimeout(() => oldLayers.forEach(l => {
-      if (!newLayers.includes(l) && state.layers.radar.hasLayer(l)) state.layers.radar.removeLayer(l);
-    }), 350);
-
-    scheduleNextRadarFrame();
-  }
-
   function beginRadarViewChange() {
-    if (!state.radarLayers.length) return;
-    clearTimeout(state.radarTimer);
-    // A pan/zoom requires a new set of tiles for every animation frame.
-    // Do not keep cycling based on readiness from the previous map view.
-    state.radarReady = state.radarLayers.map(() => false);
-  }
-
-  function radarLayerLoaded(layer) {
-    const idx = state.radarLayers.indexOf(layer);
-    if (idx < 0) return;
-    state.radarReady[idx] = true;
-
-    // If the currently selected frame has not finished loading for this view,
-    // immediately show the first frame that has. This keeps radar visible while
-    // the remaining animation frames continue loading in the background.
-    if (!state.radarReady[state.radarIndex]) {
-      if (state.radarCurrentLayer && state.radarCurrentLayer !== layer) {
-        state.radarCurrentLayer.setOpacity(0);
-      }
-      layer.setOpacity(0.72);
-      state.radarCurrentLayer = layer;
-      state.radarIndex = idx;
-    }
-    scheduleNextRadarFrame();
-  }
-
-  function scheduleNextRadarFrame() {
-    clearTimeout(state.radarTimer);
-    if (!state.radarLayers.length || !state.radarReady.some(Boolean)) return;
-    const newest = state.radarIndex === state.radarLayers.length - 1;
-    const delay = newest ? 2800 : 1400;
-    state.radarTimer = setTimeout(() => {
-      showNextReadyRadarFrame();
-      scheduleNextRadarFrame();
-    }, delay);
-  }
-
-  function showNextReadyRadarFrame() {
-    if (!state.radarLayers.length || !state.map.hasLayer(state.layers.radar)) return;
-    const count = state.radarLayers.length;
-    let nextIndex = -1;
-    for (let step = 1; step <= count; step++) {
-      const idx = (state.radarIndex + step) % count;
-      if (state.radarReady[idx]) { nextIndex = idx; break; }
-    }
-    if (nextIndex < 0 || nextIndex === state.radarIndex) return;
-
-    const oldLayer = state.radarCurrentLayer;
-    const nextLayer = state.radarLayers[nextIndex];
-    nextLayer.setOpacity(0.72);
-    if (oldLayer && oldLayer !== nextLayer) oldLayer.setOpacity(0);
-    state.radarCurrentLayer = nextLayer;
-    state.radarIndex = nextIndex;
+    // Static single-frame radar needs no animation reset.
   }
 
   function drawRadarFrame() {
-    // Kept for layer-toggle compatibility. If the previously selected frame is
-    // still loading for the current viewport, show any frame that is ready.
-    let idx = state.radarIndex;
-    if (!state.radarReady[idx]) idx = state.radarReady.findIndex(Boolean);
-    if (idx >= 0 && state.radarLayers[idx]) {
-      if (state.radarCurrentLayer && state.radarCurrentLayer !== state.radarLayers[idx]) {
-        state.radarCurrentLayer.setOpacity(0);
-      }
-      state.radarIndex = idx;
-      state.radarCurrentLayer = state.radarLayers[idx];
-      state.radarCurrentLayer.setOpacity(0.72);
-      scheduleNextRadarFrame();
-    }
+    // Restore radar after toggling the layer on.
+    if (state.radarCurrentLayer) state.radarCurrentLayer.setOpacity(0.72);
+    refreshRadar();
   }
 
   async function refreshLightning() {
