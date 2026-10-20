@@ -1,6 +1,33 @@
-# Node-RED ShackClock v1.1.8
+# Node-RED ShackClock v1.1.9
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
+
+## v1.1.9 — Radar reliability and local animation
+
+This release addresses RainViewer HTTP 429 tile-request errors and adds an optional lightweight radar animation:
+
+- **STATIC** radar remains the default in all map views, including USA and WORLD.
+- **ANIMATED (LOCAL)** is a browser-specific setting in the LAYERS panel. At map zoom level 5 or higher, ShackClock loads one additional older frame after approximately **90 seconds** without moving the map.
+- The latest radar image remains visible underneath the older frame to avoid blank intervals. This is a **two-frame overlay**, not the previous six-frame full animation; echoes can overlap during transitions.
+- Radar metadata refreshes at most once every **15 minutes**. Repeated tile failures trigger a cooldown; RainViewer rate limits may still occur when switching views on large displays.
+- Settings for radar mode use browser localStorage; your persistent Docker station settings and data volume are not changed.
+
+### Install and upgrade
+
+Download the [v1.1.9 release](https://github.com/n3bkv/node-red-shackclock/releases/tag/v1.1.9). Copy `.env.example` to `.env` and configure station details for new installations. For upgrades, **preserve your existing `.env` and `shackclock-data` Docker volume**; do not use `docker compose down -v`.
+
+When changing from a versioned release directory to another, explicitly reuse your existing Compose project name or ensure the named volume is attached. Check the current project using:
+
+```bash
+docker inspect shackclock --format '{{index .Config.Labels "com.docker.compose.project"}}'
+docker inspect shackclock --format '{{range .Mounts}}{{println .Name .Destination}}{{end}}'
+```
+
+After deploying, hard-refresh the browser. The v1.1.9 application should load `/app.js?v=1.1.9-radar-localzoom`.
+
+**Release artifact note:** The initially published v1.1.9 ZIP predates these README/Dockerfile documentation and metadata corrections. Its radar application code is the tested v1.1.9 implementation.
+
+---
 
 ## Updating public carrier reports (v1.1.8)
 
@@ -751,8 +778,8 @@ Install Docker Desktop.
 Unzip the release:
 
 ```bash
-unzip node-red-shackclock-v1.1.7.zip
-cd node-red-shackclock-v1.1.7
+unzip node-red-shackclock-v1.1.9.zip
+cd node-red-shackclock-v1.1.9
 ```
 
 Build and start:
@@ -802,7 +829,7 @@ Install Docker Engine and the Docker Compose plugin.
 Copy the project to the Pi, then:
 
 ```bash
-cd node-red-shackclock-v1.1.7
+cd node-red-shackclock-v1.1.9
 docker compose up -d --build
 ```
 
@@ -828,7 +855,7 @@ chromium \
 
 Keep the persistent Docker volume.
 
-From the v1.1.7 directory:
+From the v1.1.9 directory:
 
 ```bash
 docker compose build --no-cache
@@ -854,7 +881,7 @@ If Docker reports that the existing volume was created by an older Compose proje
 
 Some earlier test packages used the Docker volume name `n3bkv-shackclock-data`. The GitHub repository convention is `shackclock-data`.
 
-To keep using the older volume, create `.env` before starting this v1.1.7 release:
+To keep using the older volume, create `.env` before starting this v1.1.9 release:
 
 ```text
 SHACKCLOCK_DATA_VOLUME=n3bkv-shackclock-data
@@ -883,23 +910,23 @@ docker inspect shackclock \
   --format='Image={{.Config.Image}} Status={{.State.Status}} Exit={{.State.ExitCode}}'
 ```
 
-For v1.1.7 the image should be:
+For v1.1.9 the image should be:
 
 ```text
-node-red-shackclock:1.1.7
+node-red-shackclock:1.1.9
 ```
 
 Check the version embedded in the Docker image:
 
 ```bash
-docker image inspect node-red-shackclock:1.1.7 \
+docker image inspect node-red-shackclock:1.1.9 \
   --format='{{ index .Config.Labels "org.opencontainers.image.version" }}'
 ```
 
 Expected:
 
 ```text
-1.1.7
+1.1.9
 ```
 
 The health API also reports the release version and the configured public port:
@@ -914,7 +941,7 @@ With the default port, a normal response includes:
 {
   "ok": true,
   "service": "node-red-shackclock",
-  "version": "1.1.7",
+  "version": "1.1.9",
   "publicPort": 4040
 }
 ```
