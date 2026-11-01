@@ -1,19 +1,47 @@
-# Node-RED ShackClock v1.1.9
+# Node-RED ShackClock v1.1.10
 
 A full-screen amateur-radio ShackClock dashboard built with Node-RED, Leaflet and Docker for macOS and Raspberry Pi. It is designed for a large shack display and combines weather, space weather, amateur-radio activity, satellites, aircraft, public carrier-status information, clocks and station data in one browser-based dashboard.
 
-## Changes on `main` since v1.1.9 — AMSAT API migration (October 31, 2026)
+## v1.1.10 — AMSAT Status API Migration
 
-**AMSAT satellite-status migration:** The `ACTIVE HAM SATS` layer now tries `https://status.amsat.org/api/v1` first, ahead of the legacy `www.amsat.org/status/api/v1` and `amsat.org/status/api/v1` endpoints. This prepares ShackClock for AMSAT's November 4, 2026 migration. The `summary.php` and `reports.php` paths, the rolling 24-hour activity filter, TLE downloads, and separate ISS tracker are unchanged.
+This release prepares ShackClock for the AMSAT Satellite Status
+API migration scheduled for November 4, 2026.
 
-**Important release distinction:** This fix is available in the `main` branch **but is not included in the published v1.1.9 release ZIP**. Until a subsequent release is published, existing Git checkouts can obtain it with:
+### Changes
+
+- Uses https://status.amsat.org/api/v1 as the primary status API.
+- Retains the two legacy AMSAT API locations as fallbacks.
+- Updates the HTTP Referer to the new AMSAT status website.
+- Preserves the 24-hour recently-heard satellite filtering.
+- Retains existing TLE sources and local cache fallback behavior.
+- Leaves independent ISS tracking and other map layers unchanged.
+- Updates application, Docker, and startup version metadata.
+
+### Installation and upgrade
+
+Download the [v1.1.10 release](https://github.com/n3bkv/node-red-shackclock/releases/tag/v1.1.10).
+
+For existing installations, preserve your `.env` configuration
+and Docker `shackclock-data` volume.
+
+Rebuild using:
 
 ```bash
-git pull --ff-only
 docker compose up -d --build
 ```
 
-Check the active filter at `http://localhost:4040/api/amateur/status` after deployment. AMSAT expects a migration window of up to two hours starting at 14:00 UTC on November 4, 2026; cached/fallback satellite information may be used during that interval.
+Do not run `docker compose down -v`.
+
+### Verification
+
+Check satellite status diagnostics:
+
+```bash
+curl -s http://localhost:4040/api/amateur/status | python3 -m json.tool
+```
+
+AMSAT's announced migration begins November 4, 2026,
+at 14:00 UTC, with up to two hours of migration time.
 
 ---
 
