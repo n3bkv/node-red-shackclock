@@ -7,7 +7,7 @@ const ACTIVE_TLE='/data/amateur-active-tle.txt';
 const ACTIVE_META='/data/amateur-active-meta.json';
 const ACTIVE_NAMES_CACHE='/data/amateur-active-names.json';
 const ALL_TLE='/data/amateur-all-tle.txt';
-const AMSAT_BASES=['https://www.amsat.org/status/api/v1','https://amsat.org/status/api/v1'];
+const AMSAT_BASES=['https://status.amsat.org/api/v1','https://www.amsat.org/status/api/v1','https://amsat.org/status/api/v1'];
 const AMSAT_ACTIVE_DB='https://raw.githubusercontent.com/palewire/amateur-satellite-database/main/data/amsat-active-frequencies.json';
 const ORBITAL_SOURCES=[
   {name:'AMSAT nasabare',url:'https://www.amsat.org/tle/current/nasabare.txt'},
@@ -50,7 +50,7 @@ function browserHeaders(accept='application/json'){
     'User-Agent':'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0 Safari/537.36 ShackClock/1.1.3',
     'Accept':accept,
     'Accept-Language':'en-US,en;q=0.9',
-    'Referer':'https://www.amsat.org/status/',
+    'Referer':'https://status.amsat.org/',
     'Cache-Control':'no-cache'
   };
 }
