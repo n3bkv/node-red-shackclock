@@ -364,7 +364,7 @@ The default activity window is the most recent 24 hours.
 ShackClock queries the AMSAT Status API:
 
 ```text
-https://www.amsat.org/status/api/v1/summary.php?hours=24
+https://status.amsat.org/api/v1/summary.php?hours=24
 ```
 
 The helper prefers the summary endpoint so one request can identify positive activity across the configured window.
